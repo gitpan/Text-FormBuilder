@@ -5,11 +5,18 @@ use warnings;
 
 use vars qw($VERSION);
 
-$VERSION = '0.05';
+$VERSION = '0.06_01';
 
 use Carp;
 use Text::FormBuilder::Parser;
 use CGI::FormBuilder;
+
+# the default options passed to CGI::FormBuilder->new
+my %DEFAULT_OPTIONS = (
+    method => 'GET',
+    javascript => 0,
+    keepextras => 1,
+);
 
 sub new {
     my $invocant = shift;
@@ -69,7 +76,7 @@ sub build {
     delete $options{form_only};
     
     # substitute in custom pattern definitions for field validation
-    if (my %patterns = %{ $self->{form_spec}{patterns} || {} }) {
+    if (my %patterns = %{ $self->{form_spec}{patterns} }) {
         foreach (@{ $self->{form_spec}{fields} }) {
             if ($$_{validate} and exists $patterns{$$_{validate}}) {
                 $$_{validate} = $patterns{$$_{validate}};
@@ -77,45 +84,81 @@ sub build {
         }
     }
     
-    # remove extraneous undefined values
-    for my $field (@{ $self->{form_spec}{fields} }) {
-        defined $$field{$_} or delete $$field{$_} foreach keys %{ $field };
-    }
-    
-    # so we don't get all fields required
-    foreach (@{ $self->{form_spec}{fields} }) {
-        delete $$_{validate} unless $$_{validate};
-    }
-    
-    # substitute in list names
-    if (my %lists = %{ $self->{form_spec}{lists} || {} }) {
-        foreach (@{ $self->{form_spec}{fields} }) {
-            next unless $$_{list};
-            
-            $$_{list} =~ s/^\@//;   # strip leading @ from list var name
-            
-            # a hack so we don't get screwy reference errors
-            if (exists $lists{$$_{list}}) {
-                my @list;
-                push @list, { %$_ } foreach @{ $lists{$$_{list}} };
-                $$_{options} = \@list;
+##     # so we don't get all fields required
+##     foreach (@{ $self->{form_spec}{fields} }) {
+##         delete $$_{validate} unless $$_{validate};
+##     }
+
+    # expand groups
+    my %groups = %{ $self->{form_spec}{groups} };
+    foreach (grep { $$_[0] eq 'group' } @{ $self->{form_spec}{lines} }) {
+        $$_[1]{group} =~ s/^\%//;       # strip leading % from group var name
+        
+        if (exists $groups{$$_[1]{group}}) {
+            my @fields; # fields in the group
+            push @fields, { %$_ } foreach @{ $groups{$$_[1]{group}} };
+            for my $field (@fields) {
+                $$field{label} ||= ucfirst $$field{name};
+                $$field{name} = "$$_[1]{name}_$$field{name}";                
             }
-        } continue {
-            delete $$_{list};
+            $_ = [ 'group', { label => $$_[1]{label} || ucfirst(join(' ',split('_',$$_[1]{name}))), group => \@fields } ];
         }
     }
-
+    
+    $self->{form_spec}{fields} = [];
+    for my $line (@{ $self->{form_spec}{lines} }) {
+        if ($$line[0] eq 'group') {
+            push @{ $self->{form_spec}{fields} }, $_ foreach @{ $$line[1]{group} };
+        } elsif ($$line[0] eq 'field') {
+            push @{ $self->{form_spec}{fields} }, $$line[1];
+        }
+    }
+    
+    
+    # substitute in list names
+    my %lists = %{ $self->{form_spec}{lists} };
+    foreach (@{ $self->{form_spec}{fields} }) {
+        next unless $$_{list};
+        
+        $$_{list} =~ s/^\@//;   # strip leading @ from list var name
+        
+        # a hack so we don't get screwy reference errors
+        if (exists $lists{$$_{list}}) {
+            my @list;
+            push @list, { %$_ } foreach @{ $lists{$$_{list}} };
+            $$_{options} = \@list;
+        } else {
+##             #TODO: this is not working in CGI::FormBuilder
+##             # assume that the list name is a builtin 
+##             # and let it fall through to CGI::FormBuilder
+##             $$_{options} = $$_{list};
+##             warn "falling through to builtin $$_{options}";
+        }
+    } continue {
+        delete $$_{list};
+    }    
+    
     # TODO: configurable threshold for this
     foreach (@{ $self->{form_spec}{fields} }) {
         $$_{ulist} = 1 if defined $$_{options} and @{ $$_{options} } >= 3;
     }
     
+    # remove extraneous undefined values
+    for my $field (@{ $self->{form_spec}{fields} }) {
+        defined $$field{$_} or delete $$field{$_} foreach keys %{ $field };
+    }
+    
+    # because this messes up things at the CGI::FormBuilder::field level
+    # it seems to be marking required based on the existance of a 'required'
+    # param, not whether it is true or defined
+    $$_{required} or delete $$_{required} foreach @{ $self->{form_spec}{fields} };
+
+    
     $self->{form} = CGI::FormBuilder->new(
-        method => 'GET',
-        javascript => 0,
-        keepextras => 1,
+        %DEFAULT_OPTIONS,
+        required => [ map { $$_{name} } grep { $$_{required} } @{ $self->{form_spec}{fields} } ],
         title => $self->{form_spec}{title},
-        fields => [ map { $$_{name} } @{ $self->{form_spec}{fields} } ],
+        text  => $self->{form_spec}{description},
         template => {
             type => 'Text',
             engine => {
@@ -124,6 +167,7 @@ sub build {
                 DELIMITERS => [ qw(<% %>) ],
             },
             data => {
+                lines       => $self->{form_spec}{lines},
                 headings    => $self->{form_spec}{headings},
                 author      => $self->{form_spec}{author},
                 description => $self->{form_spec}{description},
@@ -176,14 +220,36 @@ sub write_module {
     my $description = $self->{form_spec}{description} || '';
     
     my $headings    = Data::Dumper->Dump([$self->{form_spec}{headings}],['headings']);
+    my $lines       = Data::Dumper->Dump([$self->{form_spec}{lines}],['lines']);
     my $fields      = Data::Dumper->Dump([ [ map { $$_{name} } @{ $self->{form_spec}{fields} } ] ],['fields']);
     
-    my %options = %{ $self->{build_options} };
+    my %options = (
+        %DEFAULT_OPTIONS,
+        title => $self->{form_spec}{title},
+        text  => $self->{form_spec}{description},
+        required => [ map { $$_{name} } grep { $$_{required} } @{ $self->{form_spec}{fields} } ],
+        template => {
+            type => 'Text',
+            engine => {
+                TYPE       => 'STRING',
+                SOURCE     => $self->{build_options}{form_only} ? $self->_form_template : $self->_template,
+                DELIMITERS => [ qw(<% %>) ],
+            },
+            data => {
+                lines       => $self->{form_spec}{lines},
+                headings    => $self->{form_spec}{headings},
+                author      => $self->{form_spec}{author},
+                description => $self->{form_spec}{description},
+            },
+        }, 
+        %{ $self->{build_options} },
+    );
+    
     my $source = $options{form_only} ? $self->_form_template : $self->_template;
     
-    delete $options{fomr_only};
+    delete $options{form_only};
     
-    my $form_options = keys %options > 0 ? Data::Dumper->Dump([$self->{build_options}],['*options']) : '';
+    my $form_options = keys %options > 0 ? Data::Dumper->Dump([\%options],['*options']) : '';
     
     my $field_setup = join(
         "\n", 
@@ -200,25 +266,7 @@ use CGI::FormBuilder;
 sub get_form {
     my \$cgi = shift;
     my \$cgi_form = CGI::FormBuilder->new(
-        method => 'GET',
         params => \$cgi,
-        javascript => 0,
-        keepextras => 1,
-        title => q[$title],
-        fields => $fields,
-        template => {
-            type => 'Text',
-            engine => {
-                TYPE       => 'STRING',
-                SOURCE     => q[$source],
-                DELIMITERS => [ qw(<% %>) ],
-            },
-            data => {
-                headings => $headings,
-                author   => q[$author],
-                description => q[$description],
-            },
-        },
         $form_options
     );
     
@@ -230,7 +278,7 @@ sub get_form {
 # module return
 1;
 END
-    
+
     my $outfile = (split(/::/, $package))[-1] . '.pm';
     
     if ($use_tidy) {
@@ -260,17 +308,49 @@ sub _form_template {
 q[<% $description ? qq[<p id="description">$description</p>] : '' %>
 <% (grep { $_->{required} } @fields) ? qq[<p id="instructions">(Required fields are marked in <strong>bold</strong>.)</p>] : '' %>
 <% $start %>
+<%
+    # drop in the hidden fields here
+    $OUT = join("\n", map { $$_{field} } grep { $$_{type} eq 'hidden' } @fields);
+%>
+
 <table>
-<% my $i; foreach(@fields) {
-    $OUT .= qq[  <tr><th class="sectionhead" colspan="2"><h2>$headings[$i]</h2></th></tr>\n] if $headings[$i];
-    $OUT .= $$_{invalid} ? qq[  <tr class="invalid">] : qq[  <tr>];
-    $OUT .= '<th class="label">' . ($$_{required} ? qq[<strong class="required">$$_{label}:</strong>] : "$$_{label}:") . '</th>';
-    if ($$_{invalid}) {
-        $OUT .= qq[<td>$$_{field} $$_{comment} Missing or invalid value.</td></tr>\n];
-    } else {
-        $OUT .= qq[<td>$$_{field} $$_{comment}</td></tr>\n];
-    }
-    $i++;
+
+<% TABLE_LINE: for my $line (@lines) {
+
+    if ($$line[0] eq 'head') {
+        $OUT .= qq[  <tr><th class="sectionhead" colspan="2"><h2>$$line[1]</h2></th></tr>\n]
+    } elsif ($$line[0] eq 'field') {
+        #TODO: we only need the field names, not the full field spec in the lines strucutre
+        local $_ = $field{$$line[1]{name}};
+        # skip hidden fields in the table
+        next TABLE_LINE if $$_{type} eq 'hidden';
+        
+        $OUT .= $$_{invalid} ? qq[  <tr class="invalid">] : qq[  <tr>];
+        $OUT .= '<th class="label">' . ($$_{required} ? qq[<strong class="required">$$_{label}:</strong>] : "$$_{label}:") . '</th>';
+        if ($$_{invalid}) {
+            $OUT .= qq[<td>$$_{field} $$_{comment} Missing or invalid value.</td></tr>\n];
+        } else {
+            $OUT .= qq[<td>$$_{field} $$_{comment}</td></tr>\n];
+        }
+    } elsif ($$line[0] eq 'group') {
+        my @field_names = map { $$_{name} } @{ $$line[1]{group} };
+        my @group_fields = map { $field{$_} } @field_names;
+        $OUT .= (grep { $$_{invalid} } @group_fields) ? qq[  <tr class="invalid">\n] : qq[  <tr>\n];
+        
+        #TODO: validated but not required fields
+        # in a form spec: //EMAIL?
+        
+        $OUT .= '    <th class="label">';
+        $OUT .= (grep { $$_{required} } @group_fields) ? qq[<strong class="required">$$line[1]{label}:</strong>] : "$$line[1]{label}:";
+        $OUT .= qq[</th>\n];
+        
+        $OUT .= qq[    <td>];
+        $OUT .= join(' ', map { qq[<small class="sublabel">$$_{label}</small> $$_{field} $$_{comment}] } @group_fields);
+        $OUT .= qq[    </td>\n];
+        $OUT .= qq[  </tr>\n];
+    }   
+    
+
 } %>
   <tr><th></th><td style="padding-top: 1em;"><% $submit %></td></tr>
 </table>
@@ -289,6 +369,8 @@ q[<html>
     th h2 { padding: .125em .5em; background: #eee; }
     th.label { font-weight: normal; text-align: right; vertical-align: top; }
     td ul { list-style: none; padding-left: 0; margin-left: 0; }
+    .sublabel { color: #999; }
+    .invalid { background: red; }
   </style>
 </head>
 <body>
@@ -320,7 +402,7 @@ sub dump {
 
 =head1 NAME
 
-Text::FormBuilder - Parser for a minilanguage for generating web forms
+Text::FormBuilder - Create CGI::FormBuilder objects from simple text descriptions
 
 =head1 SYNOPSIS
 
@@ -335,6 +417,10 @@ Text::FormBuilder - Parser for a minilanguage for generating web forms
     
     # write a My::Form module to Form.pm
     $parser->write_module('My::Form');
+
+=head1 REQUIRES
+
+L<Parse::RecDescent>, L<CGI::FormBuilder>, L<Text::Template>
 
 =head1 DESCRIPTION
 
@@ -509,8 +595,25 @@ next to each other.
 
 =head2 Fields
 
-Form fields are each described on a single line. The simplest field is just a
-name:
+First, a note about multiword strings in the fields. Anywhere where it says
+that you may use a multiword string, this means that you can do one of two
+things. For strings that consist solely of alphanumeric characters (i.e.
+C<\w+>) and spaces, the string will be recognized as is:
+
+    field_1|A longer label
+
+If you want to include non-alphanumerics (e.g. punctuation), you must 
+single-quote the string:
+
+    field_2|'Dept./Org.'
+
+To include a literal single-quote in a single-quoted string, escape it with
+a backslash:
+
+    field_3|'\'Official\' title'
+
+Now, back to the basics. Form fields are each described on a single line.
+The simplest field is just a name (which cannot contain any whitespace):
 
     color
 
@@ -520,7 +623,7 @@ To add a longer or more descriptive label, use:
 
     color|Favorite color
 
-Field names cannot contain whitespace, but the descriptive label can.
+The descriptive label can be a multiword string, as described above.
 
 To use a different input type:
 
@@ -530,25 +633,38 @@ Recognized input types are the same as those used by CGI::FormBuilder:
 
     text        # the default
     textarea
-    select
-    radio
+    password
+    file
     checkbox
+    radio
+    select
+    hidden
     static
 
-This example also shows how you can list multiple values for the input types
-that take multiple values (C<select>, C<radio>, and C<checkbox>). Values are
-in a comma-separated list inside curly braces. Whitespace between values is
-irrelevant, although there cannot be any whitespace within a value.
+To change the size of the input field, add a bracketed subscript after the
+field name (but before the descriptive label):
 
-To add more descriptive display text to a vlaue in a list, add a square-bracketed
+    # for a single line field, sets size="40"
+    title[40]:text
+    
+    # for a multiline field, sets rows="4" and cols="30"
+    description[4,30]:textarea
+
+For the input types that can have options (C<select>, C<radio>, and
+C<checkbox>), here's how you do it:
+
+    color|Favorite color:select{red,blue,green}
+
+Values are in a comma-separated list of single words or multiword strings
+inside curly braces. Whitespace between values is irrelevant.
+
+To add more descriptive display text to a value in a list, add a square-bracketed
 ``subscript,'' as in:
 
     ...:select{red[Scarlet],blue[Azure],green[Olive Drab]}
 
-As you can see, spaces I<are> allowed within the display text for a value.
-
 If you have a list of options that is too long to fit comfortably on one line,
-consider using the C<!list> directive:
+you should use the C<!list> directive:
 
     !list MONTHS {
         1[January],
@@ -565,24 +681,37 @@ There is another form of the C<!list> directive: the dynamic list:
 
 The code inside the C<&{ ... }> is C<eval>ed by C<build>, and the results
 are stuffed into the list. The C<eval>ed code can either return a simple
-list, as the example does, or the fancier C<( { value1 => 'Description 1'},
-{ value2 => 'Description 2}, ...)> form.
+list, as the example does, or the fancier C<< ( { value1 => 'Description 1'},
+{ value2 => 'Description 2}, ... ) >> form.
 
-B<NOTE:> This feature of the language may go away unless I find a compelling
+I<B<NOTE:> This feature of the language may go away unless I find a compelling
 reason for it in the next few versions. What I really wanted was lists that
 were filled in at run-time (e.g. from a database), and that can be done easily
-enough with the CGI::FormBuilder object directly.
+enough with the CGI::FormBuilder object directly.>
+
+If you want to have a single checkbox (e.g. for a field that says ``I want to
+recieve more information''), you can just specify the type as checkbox without
+supplying any options:
+
+    moreinfo|I want to recieve more information:checkbox
+
+The one drawback to this is that the label to the checkbox will still appear
+to the left of the field. I am leaving it this way for now, but if enough
+people would like this to change, I may make single-option checkboxes a special
+case and put the label on the right.
 
 You can also supply a default value to the field. To get a default value of
 C<green> for the color field:
 
     color|Favorite color:select=green{red,blue,green}
 
+Default values can also be either single words or multiword strings.
+
 To validate a field, include a validation type at the end of the field line:
 
     email|Email address//EMAIL
 
-Valid validation types include any of the builtin defaults from CGI::FormBuilder,
+Valid validation types include any of the builtin defaults from L<CGI::FormBuilder>,
 or the name of a pattern that you define with the C<!pattern> directive elsewhere
 in your form spec:
 
@@ -594,6 +723,14 @@ If you just want a required value, use the builtin validation type C<VALUE>:
 
     title//VALUE
 
+By default, adding a validation type to a field makes that field required. To
+change this, add a C<?> to the end of the validation type:
+
+    contact//EMAIL?
+
+In this case, you would get a C<contact> field that was optional, but if it
+were filled in, would have to validate as an C<EMAIL>.
+
 =head2 Comments
 
     # comment ...
@@ -602,15 +739,35 @@ Any line beginning with a C<#> is considered a comment.
 
 =head1 TODO
 
+DWIM for single valued checkboxes (e.g. C<moreinfo|Send me more info:checkbox>)
+
+Use the custom message file format for messages in the built in template
+
+C<!section> directive to split up the table into multiple tables, each
+with their own id and (optional) heading
+
+Better examples in the docs (maybe a standalone or two as well)
+
+Document the defaults that are passed to CGI::FormBuilder
+
 C<!include> directive to include external formspec files
 
-Field groups all on one line in the generated form
-
 Better tests!
+
+=head1 BUGS
+
+For now, checkboxes with a single value still display their labels on
+the left.
 
 =head1 SEE ALSO
 
 L<CGI::FormBuilder>
+
+=head1 THANKS
+
+Thanks to eszpee for pointing out some bugs in the default value parsing,
+as well as some suggestions for i18n/l10n and splitting up long forms into
+sections (that as of this release are still on the TODO list ;-).
 
 =head1 AUTHOR
 

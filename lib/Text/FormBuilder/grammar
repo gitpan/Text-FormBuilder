@@ -1,15 +1,39 @@
-{ my ($title, $author, $description, %lists, %patterns, @fields, @headings, $type, @options, $list_var, $size, $rows, $cols); }
+{ 
+    my (
+	$context,      # line or group
+	@lines,        # master data structure
+	$title,
+	$author,
+	$description,
+	%lists,
+	%patterns,
+	@fields,
+	@group,        # current group
+	%groups,       # stored groups of fields
+	@headings,
+	$type,
+	@options,
+	$required,
+	$list_var,
+	$size,
+	$rows,
+	$cols,
+    );
+    $context = 'line';
+}
 
-form_spec: (list_def | description_def | line)(s) 
+form_spec: (list_def | description_def | group_def | line)(s) 
     {
 	$return = {
 	    title    => $title,
 	    author   => $author,
 	    description => $description,
-	    lists    => \%lists, 
-	    patterns => \%patterns, 
-	    headings => \@headings,
-	    fields   => \@fields,
+	    lists    => \%lists    || {}, 
+	    patterns => \%patterns || {}, 
+	    headings => \@headings || [],
+	    fields   => \@fields   || [],
+	    lines    => \@lines    || [],
+	    groups   => \%groups   || {},
 	}
     }
 
@@ -35,7 +59,15 @@ description_def: '!description' <perl_codeblock>
     $description =~ s/^{\s*|\s*}$//g;
     }
 
-line: <skip:'[ \t]*'> ( title | author | pattern_def | heading | unknown_directive | field | comment | blank ) "\n"
+group_def: '!group' { $context = 'group' } var_name '{' field_line(s) '}' { $context = 'line' }
+    { 
+	#warn "$item{var_name} group; context $context\n"
+	$groups{$item{var_name}} = [ @group ];
+	@group = ();
+    }
+
+field_line: <skip:'[ \t]*'> ( field | comment | blank ) "\n"
+line: <skip:'[ \t]*'> ( title | author | pattern_def | heading | group_field | unknown_directive | field | comment | blank ) "\n"
 
 title: '!title' /.*/
     { warn "[Text::Formbuilder] Title redefined at input text line $thisline\n" if defined $title;
@@ -50,8 +82,18 @@ pattern_def: '!pattern' var_name pattern
 pattern: /.*/
 
 heading: '!head' /.*/
-    { warn "[Text::FormBuilder] Header before field " . scalar(@fields) . " redefined at input text line $thisline\n" if defined $headings[@fields];
-    $headings[@fields] = $item[2] }
+    {
+	warn "[Text::FormBuilder] Header before field " . scalar(@fields) . " redefined at input text line $thisline\n" if defined $headings[@fields];
+	$headings[@fields] = $item[2];
+	push @lines, [ 'head', $item[2] ];
+    }
+
+group_field: '!field' group_name name label(?)
+    { #warn "[$thisline] $item{group_name}\n"; 
+    push @lines, [ 'group', { name => $item{name}, label => $item{'label(?)'}[0], group => $item{group_name} } ];
+    }
+
+group_name: /%[A-Z_]+/
 
 field: name field_size(?) label(?) hint(?) type(?) default(?) option_list(?) validate(?)
     {
@@ -63,6 +105,7 @@ field: name field_size(?) label(?) hint(?) type(?) default(?) option_list(?) val
 	    value    => $item{'default(?)'}[0],
             list     => $list_var,
             validate => $item{'validate(?)'}[0],
+	    required => $required || 0,
 	};
 	
 	$$field{options} = [ @options ] if @options;
@@ -71,9 +114,18 @@ field: name field_size(?) label(?) hint(?) type(?) default(?) option_list(?) val
 	$$field{cols} = $cols if defined $cols;
 	$$field{size} = $size if defined $size;
 	
-	push @fields, $field;
+	#warn "[$thisline] field $item{name}; context $context\n";   
+	if ($context eq 'group') {
+	    push @group, $field;
+	} else {
+	    push @fields, $field;
+	    push @lines, [ 'field', $field ];
+	}
+	
+	#warn "field $item{name} is required" if $required;
 	
 	$type = undef;
+	$required = 0;
 	$list_var = undef;
 	$size = undef;
 	$rows = undef;
@@ -94,13 +146,21 @@ size: /\d+/
 row_col: /\d+/ /,\s*/ /\d+/
     { $rows = $item[1]; $cols = $item[3] }
 
-label: '|' /[^:\[\{\/]+/i
+label: '|' (simple_multiword | quoted_string) { $item[2] }
 
 hint: '[' /[^\]]+/ ']'    { $item[2] }
 
 type: ':' /textarea|text|password|file|checkbox|radio|select|hidden|static/
 
-default: '=' /[^\@\{\s]+/
+default: '=' (simple_multiword | quoted_string) { $item[2] }
+
+# for simple multiword values not involving punctuation
+simple_multiword: <skip:''> /[\w\t ]+/ { $item[2] }
+
+# my attempt at a single-quoted, non-interpolating string
+# where the backslash can escape literal single quotes
+quoted_string: <skip:''> "'" /(\\'|[^'])*/ "'"
+    { $item[3] =~ s/\\'/'/g; $item[3] }
 
 option_list: options | list_var
     
@@ -108,14 +168,18 @@ options: '{' option(s /,\s*/) '}'
 
 list_var: /@[A-Z_]+/ { $list_var = $item[1] }
 
-option: value display_text(?)
-    { push @options, { $item{value} => $item{'display_text(?)'}[0] } }
+option: (simple_multiword | value | quoted_string) display_text(?)
+    { push @options, { $item[1] => $item{'display_text(?)'}[0] } }
 
 value: identifier
 
 display_text: '[' /[^\]]+/i ']'    { $item[2] }
 
-validate: '//' value
+validate: '//' (optional_pattern | required_pattern)    { $item[2] }
+
+optional_pattern: /[A-Z_]+/ '?'	{ $required = 0; $item[1] }
+
+required_pattern: /[A-Z_]+/ { $required = 1; $item[1] }
 
 comment: '#' /.*/
 blank:

@@ -8,7 +8,29 @@ package Parse::RecDescent::Text::FormBuilder::Parser;
 use strict;
 use vars qw($skip $AUTOLOAD  );
 $skip = '\s*';
- my ($title, $author, $description, %lists, %patterns, @fields, @headings, $type, @options, $list_var, $size, $rows, $cols); ;
+ 
+    my (
+	$context,      # line or group
+	@lines,        # master data structure
+	$title,
+	$author,
+	$description,
+	%lists,
+	%patterns,
+	@fields,
+	@group,        # current group
+	%groups,       # stored groups of fields
+	@headings,
+	$type,
+	@options,
+	$required,
+	$list_var,
+	$size,
+	$rows,
+	$cols,
+    );
+    $context = 'line';
+;
 
 
 {
@@ -219,6 +241,314 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::row_col
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{row_col},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::group_def
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"group_def"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [group_def]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{group_def},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: ['!group' var_name '\{' field_line '\}']},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{group_def});
+		%item = (__RULE__ => q{group_def});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying terminal: ['!group']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\!group//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING1__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		
+
+		$_tok = ($_noactions) ? 0 : do { $context = 'group' };
+		unless (defined $_tok)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
+					if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION1__}=$_tok;
+		
+
+		Parse::RecDescent::_trace(q{Trying subrule: [var_name]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{group_def},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{var_name})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::var_name($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [var_name]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{group_def},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [var_name]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{var_name}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+		Parse::RecDescent::_trace(q{Trying terminal: ['\{']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{'\{'})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\{//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING2__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying repeated subrule: [field_line]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{group_def},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		$expectation->is(q{field_line})->at($text);
+		
+		unless (defined ($_tok = $thisparser->_parserepeat($text, \&Parse::RecDescent::Text::FormBuilder::Parser::field_line, 1, 100000000, $_noactions,$expectation,undef))) 
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match repeated subrule: [field_line]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{group_def},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched repeated subrule: [field_line]<< (}
+					. @$_tok . q{ times)},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{field_line(s)}} = $_tok;
+		push @item, $_tok;
+		
+
+
+		Parse::RecDescent::_trace(q{Trying terminal: ['\}']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{'\}'})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\}//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING3__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		
+
+		$_tok = ($_noactions) ? 0 : do { $context = 'line' };
+		unless (defined $_tok)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
+					if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION2__}=$_tok;
+		
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		
+
+		$_tok = ($_noactions) ? 0 : do { 
+	#warn "$item{var_name} group; context $context\n"
+	$groups{$item{var_name}} = [ @group ];
+	@group = ();
+    };
+		unless (defined $_tok)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
+					if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION3__}=$_tok;
+		
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: ['!group' var_name '\{' field_line '\}']<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{group_def},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{group_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{group_def},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{group_def},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -523,8 +853,11 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::heading
 						if defined $::RD_TRACE;
 		
 
-		$_tok = ($_noactions) ? 0 : do { warn "[Text::FormBuilder] Header before field " . scalar(@fields) . " redefined at input text line $thisline\n" if defined $headings[@fields];
-    $headings[@fields] = $item[2] };
+		$_tok = ($_noactions) ? 0 : do {
+	warn "[Text::FormBuilder] Header before field " . scalar(@fields) . " redefined at input text line $thisline\n" if defined $headings[@fields];
+	$headings[@fields] = $item[2];
+	push @lines, [ 'head', $item[2] ];
+    };
 		unless (defined $_tok)
 		{
 			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
@@ -582,6 +915,198 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::heading
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{heading},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_validate
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"_alternation_1_of_production_1_of_rule_validate"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [_alternation_1_of_production_1_of_rule_validate]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{_alternation_1_of_production_1_of_rule_validate},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [optional_pattern]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_validate});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_validate});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [optional_pattern]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_validate},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::optional_pattern($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [optional_pattern]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_validate},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [optional_pattern]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{optional_pattern}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [optional_pattern]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [required_pattern]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[1];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_validate});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_validate});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [required_pattern]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_validate},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::required_pattern($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [required_pattern]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_validate},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [required_pattern]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{required_pattern}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [required_pattern]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{_alternation_1_of_production_1_of_rule_validate},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{_alternation_1_of_production_1_of_rule_validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{_alternation_1_of_production_1_of_rule_validate},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{_alternation_1_of_production_1_of_rule_validate},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -712,6 +1237,198 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::identifier
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{identifier},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_default
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"_alternation_1_of_production_1_of_rule_default"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [_alternation_1_of_production_1_of_rule_default]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{_alternation_1_of_production_1_of_rule_default},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [simple_multiword]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_default},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_default});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_default});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [simple_multiword]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_default},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::simple_multiword($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [simple_multiword]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_default},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [simple_multiword]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_default},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{simple_multiword}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [simple_multiword]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_default},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [quoted_string]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_default},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[1];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_default});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_default});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [quoted_string]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_default},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::quoted_string($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [quoted_string]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_default},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [quoted_string]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_default},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{quoted_string}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [quoted_string]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_default},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{_alternation_1_of_production_1_of_rule_default},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{_alternation_1_of_production_1_of_rule_default},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{_alternation_1_of_production_1_of_rule_default},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{_alternation_1_of_production_1_of_rule_default},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -994,6 +1711,158 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::unknown_directive
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{unknown_directive},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::required_pattern
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"required_pattern"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [required_pattern]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{required_pattern},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [/[A-Z_]+/]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{required_pattern},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{required_pattern});
+		%item = (__RULE__ => q{required_pattern});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying terminal: [/[A-Z_]+/]}, Parse::RecDescent::_tracefirst($text),
+					  q{required_pattern},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:[A-Z_]+)//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+		push @item, $item{__PATTERN1__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{required_pattern},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		
+
+		$_tok = ($_noactions) ? 0 : do { $required = 1; $item[1] };
+		unless (defined $_tok)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
+					if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION1__}=$_tok;
+		
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [/[A-Z_]+/]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{required_pattern},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{required_pattern},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{required_pattern},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{required_pattern},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{required_pattern},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -1298,6 +2167,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::field
 	    value    => $item{'default(?)'}[0],
             list     => $list_var,
             validate => $item{'validate(?)'}[0],
+	    required => $required || 0,
 	};
 	
 	$$field{options} = [ @options ] if @options;
@@ -1306,9 +2176,18 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::field
 	$$field{cols} = $cols if defined $cols;
 	$$field{size} = $size if defined $size;
 	
-	push @fields, $field;
+	#warn "[$thisline] field $item{name}; context $context\n";   
+	if ($context eq 'group') {
+	    push @group, $field;
+	} else {
+	    push @fields, $field;
+	    push @lines, [ 'field', $field ];
+	}
+	
+	#warn "field $item{name} is required" if $required;
 	
 	$type = undef;
+	$required = 0;
 	$list_var = undef;
 	$size = undef;
 	$rows = undef;
@@ -1373,6 +2252,195 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::field
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{field},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::line
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"line"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [line]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{line},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		local $skip = defined($skip) ? $skip : $Parse::RecDescent::skip;
+		Parse::RecDescent::_trace(q{Trying production: [<skip:'[ \t]*'> title, or author, or pattern_def, or heading, or group_field, or unknown_directive, or field, or comment, or blank '\\n']},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{line});
+		%item = (__RULE__ => q{line});
+		my $repcount = 0;
+
+
+		
+
+		Parse::RecDescent::_trace(q{Trying directive: [<skip:'[ \t]*'>]},
+					Parse::RecDescent::_tracefirst($text),
+					  q{line},
+					  $tracelevel)
+						if defined $::RD_TRACE; 
+		$_tok = do { my $oldskip = $skip; $skip='[ \t]*'; $oldskip };
+		if (defined($_tok))
+		{
+			Parse::RecDescent::_trace(q{>>Matched directive<< (return value: [}
+						. $_tok . q{])},
+						Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		}
+		else
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match directive>>},
+						Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		}
+		
+		last unless defined $_tok;
+		push @item, $item{__DIRECTIVE1__}=$_tok;
+		
+
+		Parse::RecDescent::_trace(q{Trying subrule: [_alternation_1_of_production_1_of_rule_line]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{line},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{title, or author, or pattern_def, or heading, or group_field, or unknown_directive, or field, or comment, or blank})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_line($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [_alternation_1_of_production_1_of_rule_line]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{line},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [_alternation_1_of_production_1_of_rule_line]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{_alternation_1_of_production_1_of_rule_line}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+		Parse::RecDescent::_trace(q{Trying terminal: ['\\n']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{'\\n'})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   do { $_tok = "\n"; 1 } and
+		     substr($text,0,length($_tok)) eq $_tok and
+		     do { substr($text,0,length($_tok)) = ""; 1; }
+		)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $_tok . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING1__}=$_tok;
+		
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [<skip:'[ \t]*'> title, or author, or pattern_def, or heading, or group_field, or unknown_directive, or field, or comment, or blank '\\n']<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{line},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{line},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{line},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -1536,12 +2604,69 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1
 	while (!$_matched && !$commit)
 	{
 		
-		Parse::RecDescent::_trace(q{Trying production: [line]},
+		Parse::RecDescent::_trace(q{Trying production: [group_def]},
 					  Parse::RecDescent::_tracefirst($_[1]),
 					  q{_alternation_1_of_production_1_of_rule_form_spec},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		my $thisprod = $thisrule->{"prods"}[2];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_form_spec});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_form_spec});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [group_def]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_form_spec},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::group_def($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [group_def]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_form_spec},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [group_def]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_form_spec},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{group_def}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [group_def]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_form_spec},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [line]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_form_spec},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[3];
 		$text = $_[1];
 		my $_savetext;
 		@item = (q{_alternation_1_of_production_1_of_rule_form_spec});
@@ -1629,17 +2754,17 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1
 }
 
 # ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
-sub Parse::RecDescent::Text::FormBuilder::Parser::line
+sub Parse::RecDescent::Text::FormBuilder::Parser::optional_pattern
 {
 	my $thisparser = $_[0];
 	use vars q{$tracelevel};
 	local $tracelevel = ($tracelevel||0)+1;
 	$ERRORS = 0;
-	my $thisrule = $thisparser->{"rules"}{"line"};
+	my $thisrule = $thisparser->{"rules"}{"optional_pattern"};
 	
-	Parse::RecDescent::_trace(q{Trying rule: [line]},
+	Parse::RecDescent::_trace(q{Trying rule: [optional_pattern]},
 				  Parse::RecDescent::_tracefirst($_[1]),
-				  q{line},
+				  q{optional_pattern},
 				  $tracelevel)
 					if defined $::RD_TRACE;
 
@@ -1670,108 +2795,96 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::line
 
 	while (!$_matched && !$commit)
 	{
-		local $skip = defined($skip) ? $skip : $Parse::RecDescent::skip;
-		Parse::RecDescent::_trace(q{Trying production: [<skip:'[ \t]*'> title, or author, or pattern_def, or heading, or unknown_directive, or field, or comment, or blank '\\n']},
+		
+		Parse::RecDescent::_trace(q{Trying production: [/[A-Z_]+/ '?']},
 					  Parse::RecDescent::_tracefirst($_[1]),
-					  q{line},
+					  q{optional_pattern},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		my $thisprod = $thisrule->{"prods"}[0];
 		$text = $_[1];
 		my $_savetext;
-		@item = (q{line});
-		%item = (__RULE__ => q{line});
+		@item = (q{optional_pattern});
+		%item = (__RULE__ => q{optional_pattern});
 		my $repcount = 0;
 
 
-		
-
-		Parse::RecDescent::_trace(q{Trying directive: [<skip:'[ \t]*'>]},
-					Parse::RecDescent::_tracefirst($text),
-					  q{line},
-					  $tracelevel)
-						if defined $::RD_TRACE; 
-		$_tok = do { my $oldskip = $skip; $skip='[ \t]*'; $oldskip };
-		if (defined($_tok))
-		{
-			Parse::RecDescent::_trace(q{>>Matched directive<< (return value: [}
-						. $_tok . q{])},
-						Parse::RecDescent::_tracefirst($text))
-							if defined $::RD_TRACE;
-		}
-		else
-		{
-			Parse::RecDescent::_trace(q{<<Didn't match directive>>},
-						Parse::RecDescent::_tracefirst($text))
-							if defined $::RD_TRACE;
-		}
-		
-		last unless defined $_tok;
-		push @item, $item{__DIRECTIVE1__}=$_tok;
-		
-
-		Parse::RecDescent::_trace(q{Trying subrule: [_alternation_1_of_production_1_of_rule_line]},
-				  Parse::RecDescent::_tracefirst($text),
-				  q{line},
-				  $tracelevel)
-					if defined $::RD_TRACE;
-		if (1) { no strict qw{refs};
-		$expectation->is(q{title, or author, or pattern_def, or heading, or unknown_directive, or field, or comment, or blank})->at($text);
-		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_line($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
-		{
-			
-			Parse::RecDescent::_trace(q{<<Didn't match subrule: [_alternation_1_of_production_1_of_rule_line]>>},
-						  Parse::RecDescent::_tracefirst($text),
-						  q{line},
-						  $tracelevel)
-							if defined $::RD_TRACE;
-			$expectation->failed();
-			last;
-		}
-		Parse::RecDescent::_trace(q{>>Matched subrule: [_alternation_1_of_production_1_of_rule_line]<< (return value: [}
-					. $_tok . q{]},
-					  
-					  Parse::RecDescent::_tracefirst($text),
-					  q{line},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$item{q{_alternation_1_of_production_1_of_rule_line}} = $_tok;
-		push @item, $_tok;
-		
-		}
-
-		Parse::RecDescent::_trace(q{Trying terminal: ['\\n']},
-					  Parse::RecDescent::_tracefirst($text),
-					  q{line},
+		Parse::RecDescent::_trace(q{Trying terminal: [/[A-Z_]+/]}, Parse::RecDescent::_tracefirst($text),
+					  q{optional_pattern},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		$lastsep = "";
-		$expectation->is(q{'\\n'})->at($text);
+		$expectation->is(q{})->at($text);
 		
 
-		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   do { $_tok = "\n"; 1 } and
-		     substr($text,0,length($_tok)) eq $_tok and
-		     do { substr($text,0,length($_tok)) = ""; 1; }
-		)
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:[A-Z_]+)//)
 		{
 			
 			$expectation->failed();
 			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
 						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+		push @item, $item{__PATTERN1__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying terminal: ['?']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{optional_pattern},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{'?'})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\?//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
 							if defined $::RD_TRACE;
 			last;
 		}
 		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
-						. $_tok . q{])},
+						. $& . q{])},
 						  Parse::RecDescent::_tracefirst($text))
 							if defined $::RD_TRACE;
-		push @item, $item{__STRING1__}=$_tok;
+		push @item, $item{__STRING1__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{optional_pattern},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		
+
+		$_tok = ($_noactions) ? 0 : do { $required = 0; $item[1] };
+		unless (defined $_tok)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
+					if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION1__}=$_tok;
 		
 
 
-		Parse::RecDescent::_trace(q{>>Matched production: [<skip:'[ \t]*'> title, or author, or pattern_def, or heading, or unknown_directive, or field, or comment, or blank '\\n']<<},
+		Parse::RecDescent::_trace(q{>>Matched production: [/[A-Z_]+/ '?']<<},
 					  Parse::RecDescent::_tracefirst($text),
-					  q{line},
+					  q{optional_pattern},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		$_matched = 1;
@@ -1786,7 +2899,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::line
 		$_[1] = $text;	# NOT SURE THIS IS NEEDED
 		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
 					 Parse::RecDescent::_tracefirst($_[1]),
-					 q{line},
+					 q{optional_pattern},
 					 $tracelevel)
 					if defined $::RD_TRACE;
 		return undef;
@@ -1794,7 +2907,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::line
 	if (!defined($return) && defined($score))
 	{
 		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
-					  q{line},
+					  q{optional_pattern},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		$return = $score_return;
@@ -1805,12 +2918,12 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::line
 	{
 		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
 					  $return . q{])}, "",
-					  q{line},
+					  q{optional_pattern},
 					  $tracelevel);
 		Parse::RecDescent::_trace(q{(consumed: [} .
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
-					  , q{line},
+					  , q{optional_pattern},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -2322,7 +3435,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::default
 	while (!$_matched && !$commit)
 	{
 		
-		Parse::RecDescent::_trace(q{Trying production: ['=' /[^\\@\\\{\\s]+/]},
+		Parse::RecDescent::_trace(q{Trying production: ['=' simple_multiword, or quoted_string]},
 					  Parse::RecDescent::_tracefirst($_[1]),
 					  q{default},
 					  $tracelevel)
@@ -2360,33 +3473,60 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::default
 		push @item, $item{__STRING1__}=$&;
 		
 
-		Parse::RecDescent::_trace(q{Trying terminal: [/[^\\@\\\{\\s]+/]}, Parse::RecDescent::_tracefirst($text),
+		Parse::RecDescent::_trace(q{Trying subrule: [_alternation_1_of_production_1_of_rule_default]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{default},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{simple_multiword, or quoted_string})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_default($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [_alternation_1_of_production_1_of_rule_default]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{default},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [_alternation_1_of_production_1_of_rule_default]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
 					  q{default},
 					  $tracelevel)
 						if defined $::RD_TRACE;
-		$lastsep = "";
-		$expectation->is(q{/[^\\@\\\{\\s]+/})->at($text);
+		$item{q{_alternation_1_of_production_1_of_rule_default}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{default},
+					  $tracelevel)
+						if defined $::RD_TRACE;
 		
 
-		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:[^\@\{\s]+)//)
+		$_tok = ($_noactions) ? 0 : do { $item[2] };
+		unless (defined $_tok)
 		{
-			
-			$expectation->failed();
-			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
-						  Parse::RecDescent::_tracefirst($text))
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
 					if defined $::RD_TRACE;
-
 			last;
 		}
-		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
-						. $& . q{])},
-						  Parse::RecDescent::_tracefirst($text))
-					if defined $::RD_TRACE;
-		push @item, $item{__PATTERN1__}=$&;
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION1__}=$_tok;
 		
 
 
-		Parse::RecDescent::_trace(q{>>Matched production: ['=' /[^\\@\\\{\\s]+/]<<},
+		Parse::RecDescent::_trace(q{>>Matched production: ['=' simple_multiword, or quoted_string]<<},
 					  Parse::RecDescent::_tracefirst($text),
 					  q{default},
 					  $tracelevel)
@@ -2428,6 +3568,433 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::default
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{default},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_field_line
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"_alternation_1_of_production_1_of_rule_field_line"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [_alternation_1_of_production_1_of_rule_field_line]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{_alternation_1_of_production_1_of_rule_field_line},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [field]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_field_line});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_field_line});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [field]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_field_line},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::field($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [field]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_field_line},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [field]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{field}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [field]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [comment]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[1];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_field_line});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_field_line});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [comment]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_field_line},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::comment($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [comment]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_field_line},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [comment]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{comment}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [comment]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [blank]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[2];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_field_line});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_field_line});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [blank]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_field_line},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::blank($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [blank]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_field_line},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [blank]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{blank}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [blank]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{_alternation_1_of_production_1_of_rule_field_line},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{_alternation_1_of_production_1_of_rule_field_line},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::simple_multiword
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"simple_multiword"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [simple_multiword]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{simple_multiword},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		local $skip = defined($skip) ? $skip : $Parse::RecDescent::skip;
+		Parse::RecDescent::_trace(q{Trying production: [<skip:''> /[\\w\\t ]+/]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{simple_multiword},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{simple_multiword});
+		%item = (__RULE__ => q{simple_multiword});
+		my $repcount = 0;
+
+
+		
+
+		Parse::RecDescent::_trace(q{Trying directive: [<skip:''>]},
+					Parse::RecDescent::_tracefirst($text),
+					  q{simple_multiword},
+					  $tracelevel)
+						if defined $::RD_TRACE; 
+		$_tok = do { my $oldskip = $skip; $skip=''; $oldskip };
+		if (defined($_tok))
+		{
+			Parse::RecDescent::_trace(q{>>Matched directive<< (return value: [}
+						. $_tok . q{])},
+						Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		}
+		else
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match directive>>},
+						Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		}
+		
+		last unless defined $_tok;
+		push @item, $item{__DIRECTIVE1__}=$_tok;
+		
+
+		Parse::RecDescent::_trace(q{Trying terminal: [/[\\w\\t ]+/]}, Parse::RecDescent::_tracefirst($text),
+					  q{simple_multiword},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{/[\\w\\t ]+/})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:[\w\t ]+)//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+		push @item, $item{__PATTERN1__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{simple_multiword},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		
+
+		$_tok = ($_noactions) ? 0 : do { $item[2] };
+		unless (defined $_tok)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
+					if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION1__}=$_tok;
+		
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [<skip:''> /[\\w\\t ]+/]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{simple_multiword},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{simple_multiword},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{simple_multiword},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{simple_multiword},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{simple_multiword},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -2477,7 +4044,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::form_spec
 	while (!$_matched && !$commit)
 	{
 		
-		Parse::RecDescent::_trace(q{Trying production: [list_def, or description_def, or line]},
+		Parse::RecDescent::_trace(q{Trying production: [list_def, or description_def, or group_def, or line]},
 					  Parse::RecDescent::_tracefirst($_[1]),
 					  q{form_spec},
 					  $tracelevel)
@@ -2490,7 +4057,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::form_spec
 		my $repcount = 0;
 
 
-		Parse::RecDescent::_trace(q{Trying repeated subrule: [list_def, or description_def, or line]},
+		Parse::RecDescent::_trace(q{Trying repeated subrule: [list_def, or description_def, or group_def, or line]},
 				  Parse::RecDescent::_tracefirst($text),
 				  q{form_spec},
 				  $tracelevel)
@@ -2499,7 +4066,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::form_spec
 		
 		unless (defined ($_tok = $thisparser->_parserepeat($text, \&Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_form_spec, 1, 100000000, $_noactions,$expectation,undef))) 
 		{
-			Parse::RecDescent::_trace(q{<<Didn't match repeated subrule: [list_def, or description_def, or line]>>},
+			Parse::RecDescent::_trace(q{<<Didn't match repeated subrule: [list_def, or description_def, or group_def, or line]>>},
 						  Parse::RecDescent::_tracefirst($text),
 						  q{form_spec},
 						  $tracelevel)
@@ -2530,10 +4097,12 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::form_spec
 	    title    => $title,
 	    author   => $author,
 	    description => $description,
-	    lists    => \%lists, 
-	    patterns => \%patterns, 
-	    headings => \@headings,
-	    fields   => \@fields,
+	    lists    => \%lists    || {}, 
+	    patterns => \%patterns || {}, 
+	    headings => \@headings || [],
+	    fields   => \@fields   || [],
+	    lines    => \@lines    || [],
+	    groups   => \%groups   || {},
 	}
     };
 		unless (defined $_tok)
@@ -2551,7 +4120,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::form_spec
 		
 
 
-		Parse::RecDescent::_trace(q{>>Matched production: [list_def, or description_def, or line]<<},
+		Parse::RecDescent::_trace(q{>>Matched production: [list_def, or description_def, or group_def, or line]<<},
 					  Parse::RecDescent::_tracefirst($text),
 					  q{form_spec},
 					  $tracelevel)
@@ -2999,7 +4568,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::label
 	while (!$_matched && !$commit)
 	{
 		
-		Parse::RecDescent::_trace(q{Trying production: ['|' /[^:\\[\\\{\\/]+/i]},
+		Parse::RecDescent::_trace(q{Trying production: ['|' simple_multiword, or quoted_string]},
 					  Parse::RecDescent::_tracefirst($_[1]),
 					  q{label},
 					  $tracelevel)
@@ -3037,33 +4606,60 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::label
 		push @item, $item{__STRING1__}=$&;
 		
 
-		Parse::RecDescent::_trace(q{Trying terminal: [/[^:\\[\\\{\\/]+/i]}, Parse::RecDescent::_tracefirst($text),
+		Parse::RecDescent::_trace(q{Trying subrule: [_alternation_1_of_production_1_of_rule_label]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{label},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{simple_multiword, or quoted_string})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_label($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [_alternation_1_of_production_1_of_rule_label]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{label},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [_alternation_1_of_production_1_of_rule_label]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
 					  q{label},
 					  $tracelevel)
 						if defined $::RD_TRACE;
-		$lastsep = "";
-		$expectation->is(q{/[^:\\[\\\{\\/]+/i})->at($text);
+		$item{q{_alternation_1_of_production_1_of_rule_label}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{label},
+					  $tracelevel)
+						if defined $::RD_TRACE;
 		
 
-		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:[^:\[\{\/]+)//i)
+		$_tok = ($_noactions) ? 0 : do { $item[2] };
+		unless (defined $_tok)
 		{
-			
-			$expectation->failed();
-			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
-						  Parse::RecDescent::_tracefirst($text))
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
 					if defined $::RD_TRACE;
-
 			last;
 		}
-		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
-						. $& . q{])},
-						  Parse::RecDescent::_tracefirst($text))
-					if defined $::RD_TRACE;
-		push @item, $item{__PATTERN1__}=$&;
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION1__}=$_tok;
 		
 
 
-		Parse::RecDescent::_trace(q{>>Matched production: ['|' /[^:\\[\\\{\\/]+/i]<<},
+		Parse::RecDescent::_trace(q{>>Matched production: ['|' simple_multiword, or quoted_string]<<},
 					  Parse::RecDescent::_tracefirst($text),
 					  q{label},
 					  $tracelevel)
@@ -3688,6 +5284,306 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::dynamic_list
 }
 
 # ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::options
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"options"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [options]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{options},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: ['\{' <leftop: option /,\\s*/ option> '\}']},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{options},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{options});
+		%item = (__RULE__ => q{options});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying terminal: ['\{']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{options},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\{//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING1__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying operator: [<leftop: option /,\\s*/ option>]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{options},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		$expectation->is(q{<leftop: option /,\\s*/ option>})->at($text);
+
+		$_tok = undef;
+		OPLOOP: while (1)
+		{
+		  $repcount = 0;
+		  my  @item;
+		  
+		  # MATCH LEFTARG
+		  
+		Parse::RecDescent::_trace(q{Trying subrule: [option]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{options},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{option})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::option($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [option]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{options},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [option]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{options},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{option}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		  $repcount++;
+
+		  my $savetext = $text;
+		  my $backtrack;
+
+		  # MATCH (OP RIGHTARG)(s)
+		  while ($repcount < 100000000)
+		  {
+			$backtrack = 0;
+			
+		Parse::RecDescent::_trace(q{Trying terminal: [/,\\s*/]}, Parse::RecDescent::_tracefirst($text),
+					  q{options},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{/,\\s*/})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:,\s*)//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+		push @item, $item{__PATTERN1__}=$&;
+		
+
+			pop @item;
+			if (defined $1) {push @item, $item{'option(s)'}=$1; $backtrack=1;}
+			
+		Parse::RecDescent::_trace(q{Trying subrule: [option]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{options},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{option})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::option($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [option]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{options},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [option]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{options},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{option}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+			$savetext = $text;
+			$repcount++;
+		  }
+		  $text = $savetext;
+		  pop @item if $backtrack;
+
+		  unless (@item) { undef $_tok; last }
+		  $_tok = [ @item ];
+		  last;
+		} 
+
+		unless ($repcount>=1)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match operator: [<leftop: option /,\\s*/ option>]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{options},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched operator: [<leftop: option /,\\s*/ option>]<< (return value: [}
+					  . qq{@{$_tok||[]}} . q{]},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{options},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+
+		push @item, $item{'option(s)'}=$_tok||[];
+
+
+		Parse::RecDescent::_trace(q{Trying terminal: ['\}']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{options},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{'\}'})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\}//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING2__}=$&;
+		
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: ['\{' <leftop: option /,\\s*/ option> '\}']<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{options},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{options},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{options},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{options},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{options},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
 sub Parse::RecDescent::Text::FormBuilder::Parser::list_def
 {
 	my $thisparser = $_[0];
@@ -4083,17 +5979,17 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::description_def
 }
 
 # ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
-sub Parse::RecDescent::Text::FormBuilder::Parser::options
+sub Parse::RecDescent::Text::FormBuilder::Parser::field_line
 {
 	my $thisparser = $_[0];
 	use vars q{$tracelevel};
 	local $tracelevel = ($tracelevel||0)+1;
 	$ERRORS = 0;
-	my $thisrule = $thisparser->{"rules"}{"options"};
+	my $thisrule = $thisparser->{"rules"}{"field_line"};
 	
-	Parse::RecDescent::_trace(q{Trying rule: [options]},
+	Parse::RecDescent::_trace(q{Trying rule: [field_line]},
 				  Parse::RecDescent::_tracefirst($_[1]),
-				  q{options},
+				  q{field_line},
 				  $tracelevel)
 					if defined $::RD_TRACE;
 
@@ -4124,219 +6020,108 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::options
 
 	while (!$_matched && !$commit)
 	{
-		
-		Parse::RecDescent::_trace(q{Trying production: ['\{' <leftop: option /,\\s*/ option> '\}']},
+		local $skip = defined($skip) ? $skip : $Parse::RecDescent::skip;
+		Parse::RecDescent::_trace(q{Trying production: [<skip:'[ \t]*'> field, or comment, or blank '\\n']},
 					  Parse::RecDescent::_tracefirst($_[1]),
-					  q{options},
+					  q{field_line},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		my $thisprod = $thisrule->{"prods"}[0];
 		$text = $_[1];
 		my $_savetext;
-		@item = (q{options});
-		%item = (__RULE__ => q{options});
+		@item = (q{field_line});
+		%item = (__RULE__ => q{field_line});
 		my $repcount = 0;
 
 
-		Parse::RecDescent::_trace(q{Trying terminal: ['\{']},
-					  Parse::RecDescent::_tracefirst($text),
-					  q{options},
+		
+
+		Parse::RecDescent::_trace(q{Trying directive: [<skip:'[ \t]*'>]},
+					Parse::RecDescent::_tracefirst($text),
+					  q{field_line},
 					  $tracelevel)
-						if defined $::RD_TRACE;
-		$lastsep = "";
-		$expectation->is(q{})->at($text);
-		
-
-		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\{//)
+						if defined $::RD_TRACE; 
+		$_tok = do { my $oldskip = $skip; $skip='[ \t]*'; $oldskip };
+		if (defined($_tok))
 		{
-			
-			$expectation->failed();
-			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
-						  Parse::RecDescent::_tracefirst($text))
+			Parse::RecDescent::_trace(q{>>Matched directive<< (return value: [}
+						. $_tok . q{])},
+						Parse::RecDescent::_tracefirst($text))
 							if defined $::RD_TRACE;
-			last;
 		}
-		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
-						. $& . q{])},
-						  Parse::RecDescent::_tracefirst($text))
+		else
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match directive>>},
+						Parse::RecDescent::_tracefirst($text))
 							if defined $::RD_TRACE;
-		push @item, $item{__STRING1__}=$&;
+		}
+		
+		last unless defined $_tok;
+		push @item, $item{__DIRECTIVE1__}=$_tok;
 		
 
-		Parse::RecDescent::_trace(q{Trying operator: [<leftop: option /,\\s*/ option>]},
+		Parse::RecDescent::_trace(q{Trying subrule: [_alternation_1_of_production_1_of_rule_field_line]},
 				  Parse::RecDescent::_tracefirst($text),
-				  q{options},
-				  $tracelevel)
-					if defined $::RD_TRACE;
-		$expectation->is(q{<leftop: option /,\\s*/ option>})->at($text);
-
-		$_tok = undef;
-		OPLOOP: while (1)
-		{
-		  $repcount = 0;
-		  my  @item;
-		  
-		  # MATCH LEFTARG
-		  
-		Parse::RecDescent::_trace(q{Trying subrule: [option]},
-				  Parse::RecDescent::_tracefirst($text),
-				  q{options},
+				  q{field_line},
 				  $tracelevel)
 					if defined $::RD_TRACE;
 		if (1) { no strict qw{refs};
-		$expectation->is(q{option})->at($text);
-		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::option($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		$expectation->is(q{field, or comment, or blank})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_field_line($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
 		{
 			
-			Parse::RecDescent::_trace(q{<<Didn't match subrule: [option]>>},
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [_alternation_1_of_production_1_of_rule_field_line]>>},
 						  Parse::RecDescent::_tracefirst($text),
-						  q{options},
+						  q{field_line},
 						  $tracelevel)
 							if defined $::RD_TRACE;
 			$expectation->failed();
 			last;
 		}
-		Parse::RecDescent::_trace(q{>>Matched subrule: [option]<< (return value: [}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [_alternation_1_of_production_1_of_rule_field_line]<< (return value: [}
 					. $_tok . q{]},
 					  
 					  Parse::RecDescent::_tracefirst($text),
-					  q{options},
+					  q{field_line},
 					  $tracelevel)
 						if defined $::RD_TRACE;
-		$item{q{option}} = $_tok;
+		$item{q{_alternation_1_of_production_1_of_rule_field_line}} = $_tok;
 		push @item, $_tok;
 		
 		}
 
-
-		  $repcount++;
-
-		  my $savetext = $text;
-		  my $backtrack;
-
-		  # MATCH (OP RIGHTARG)(s)
-		  while ($repcount < 100000000)
-		  {
-			$backtrack = 0;
-			
-		Parse::RecDescent::_trace(q{Trying terminal: [/,\\s*/]}, Parse::RecDescent::_tracefirst($text),
-					  q{options},
+		Parse::RecDescent::_trace(q{Trying terminal: ['\\n']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{field_line},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		$lastsep = "";
-		$expectation->is(q{/,\\s*/})->at($text);
+		$expectation->is(q{'\\n'})->at($text);
 		
 
-		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:,\s*)//)
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   do { $_tok = "\n"; 1 } and
+		     substr($text,0,length($_tok)) eq $_tok and
+		     do { substr($text,0,length($_tok)) = ""; 1; }
+		)
 		{
 			
 			$expectation->failed();
 			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
 						  Parse::RecDescent::_tracefirst($text))
-					if defined $::RD_TRACE;
-
-			last;
-		}
-		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
-						. $& . q{])},
-						  Parse::RecDescent::_tracefirst($text))
-					if defined $::RD_TRACE;
-		push @item, $item{__PATTERN1__}=$&;
-		
-
-			pop @item;
-			if (defined $1) {push @item, $item{'option(s)'}=$1; $backtrack=1;}
-			
-		Parse::RecDescent::_trace(q{Trying subrule: [option]},
-				  Parse::RecDescent::_tracefirst($text),
-				  q{options},
-				  $tracelevel)
-					if defined $::RD_TRACE;
-		if (1) { no strict qw{refs};
-		$expectation->is(q{option})->at($text);
-		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::option($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
-		{
-			
-			Parse::RecDescent::_trace(q{<<Didn't match subrule: [option]>>},
-						  Parse::RecDescent::_tracefirst($text),
-						  q{options},
-						  $tracelevel)
-							if defined $::RD_TRACE;
-			$expectation->failed();
-			last;
-		}
-		Parse::RecDescent::_trace(q{>>Matched subrule: [option]<< (return value: [}
-					. $_tok . q{]},
-					  
-					  Parse::RecDescent::_tracefirst($text),
-					  q{options},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$item{q{option}} = $_tok;
-		push @item, $_tok;
-		
-		}
-
-			$savetext = $text;
-			$repcount++;
-		  }
-		  $text = $savetext;
-		  pop @item if $backtrack;
-
-		  unless (@item) { undef $_tok; last }
-		  $_tok = [ @item ];
-		  last;
-		} 
-
-		unless ($repcount>=1)
-		{
-			Parse::RecDescent::_trace(q{<<Didn't match operator: [<leftop: option /,\\s*/ option>]>>},
-						  Parse::RecDescent::_tracefirst($text),
-						  q{options},
-						  $tracelevel)
-							if defined $::RD_TRACE;
-			$expectation->failed();
-			last;
-		}
-		Parse::RecDescent::_trace(q{>>Matched operator: [<leftop: option /,\\s*/ option>]<< (return value: [}
-					  . qq{@{$_tok||[]}} . q{]},
-					  Parse::RecDescent::_tracefirst($text),
-					  q{options},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-
-		push @item, $item{'option(s)'}=$_tok||[];
-
-
-		Parse::RecDescent::_trace(q{Trying terminal: ['\}']},
-					  Parse::RecDescent::_tracefirst($text),
-					  q{options},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$lastsep = "";
-		$expectation->is(q{'\}'})->at($text);
-		
-
-		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\}//)
-		{
-			
-			$expectation->failed();
-			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
-						  Parse::RecDescent::_tracefirst($text))
 							if defined $::RD_TRACE;
 			last;
 		}
 		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
-						. $& . q{])},
+						. $_tok . q{])},
 						  Parse::RecDescent::_tracefirst($text))
 							if defined $::RD_TRACE;
-		push @item, $item{__STRING2__}=$&;
+		push @item, $item{__STRING1__}=$_tok;
 		
 
 
-		Parse::RecDescent::_trace(q{>>Matched production: ['\{' <leftop: option /,\\s*/ option> '\}']<<},
+		Parse::RecDescent::_trace(q{>>Matched production: [<skip:'[ \t]*'> field, or comment, or blank '\\n']<<},
 					  Parse::RecDescent::_tracefirst($text),
-					  q{options},
+					  q{field_line},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		$_matched = 1;
@@ -4351,7 +6136,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::options
 		$_[1] = $text;	# NOT SURE THIS IS NEEDED
 		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
 					 Parse::RecDescent::_tracefirst($_[1]),
-					 q{options},
+					 q{field_line},
 					 $tracelevel)
 					if defined $::RD_TRACE;
 		return undef;
@@ -4359,7 +6144,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::options
 	if (!defined($return) && defined($score))
 	{
 		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
-					  q{options},
+					  q{field_line},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		$return = $score_return;
@@ -4370,12 +6155,12 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::options
 	{
 		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
 					  $return . q{])}, "",
-					  q{options},
+					  q{field_line},
 					  $tracelevel);
 		Parse::RecDescent::_trace(q{(consumed: [} .
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
-					  , q{options},
+					  , q{field_line},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -4712,6 +6497,198 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::size
 }
 
 # ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_label
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"_alternation_1_of_production_1_of_rule_label"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [_alternation_1_of_production_1_of_rule_label]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{_alternation_1_of_production_1_of_rule_label},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [simple_multiword]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_label},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_label});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_label});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [simple_multiword]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_label},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::simple_multiword($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [simple_multiword]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_label},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [simple_multiword]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_label},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{simple_multiword}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [simple_multiword]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_label},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [quoted_string]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_label},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[1];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_label});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_label});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [quoted_string]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_label},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::quoted_string($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [quoted_string]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_label},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [quoted_string]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_label},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{quoted_string}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [quoted_string]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_label},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{_alternation_1_of_production_1_of_rule_label},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{_alternation_1_of_production_1_of_rule_label},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{_alternation_1_of_production_1_of_rule_label},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{_alternation_1_of_production_1_of_rule_label},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
 sub Parse::RecDescent::Text::FormBuilder::Parser::var_name
 {
 	my $thisparser = $_[0];
@@ -4884,7 +6861,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::option
 	while (!$_matched && !$commit)
 	{
 		
-		Parse::RecDescent::_trace(q{Trying production: [value display_text]},
+		Parse::RecDescent::_trace(q{Trying production: [simple_multiword, or value, or quoted_string display_text]},
 					  Parse::RecDescent::_tracefirst($_[1]),
 					  q{option},
 					  $tracelevel)
@@ -4897,17 +6874,17 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::option
 		my $repcount = 0;
 
 
-		Parse::RecDescent::_trace(q{Trying subrule: [value]},
+		Parse::RecDescent::_trace(q{Trying subrule: [_alternation_1_of_production_1_of_rule_option]},
 				  Parse::RecDescent::_tracefirst($text),
 				  q{option},
 				  $tracelevel)
 					if defined $::RD_TRACE;
 		if (1) { no strict qw{refs};
 		$expectation->is(q{})->at($text);
-		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::value($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_option($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
 		{
 			
-			Parse::RecDescent::_trace(q{<<Didn't match subrule: [value]>>},
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [_alternation_1_of_production_1_of_rule_option]>>},
 						  Parse::RecDescent::_tracefirst($text),
 						  q{option},
 						  $tracelevel)
@@ -4915,14 +6892,14 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::option
 			$expectation->failed();
 			last;
 		}
-		Parse::RecDescent::_trace(q{>>Matched subrule: [value]<< (return value: [}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [_alternation_1_of_production_1_of_rule_option]<< (return value: [}
 					. $_tok . q{]},
 					  
 					  Parse::RecDescent::_tracefirst($text),
 					  q{option},
 					  $tracelevel)
 						if defined $::RD_TRACE;
-		$item{q{value}} = $_tok;
+		$item{q{_alternation_1_of_production_1_of_rule_option}} = $_tok;
 		push @item, $_tok;
 		
 		}
@@ -4962,7 +6939,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::option
 						if defined $::RD_TRACE;
 		
 
-		$_tok = ($_noactions) ? 0 : do { push @options, { $item{value} => $item{'display_text(?)'}[0] } };
+		$_tok = ($_noactions) ? 0 : do { push @options, { $item[1] => $item{'display_text(?)'}[0] } };
 		unless (defined $_tok)
 		{
 			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
@@ -4978,7 +6955,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::option
 		
 
 
-		Parse::RecDescent::_trace(q{>>Matched production: [value display_text]<<},
+		Parse::RecDescent::_trace(q{>>Matched production: [simple_multiword, or value, or quoted_string display_text]<<},
 					  Parse::RecDescent::_tracefirst($text),
 					  q{option},
 					  $tracelevel)
@@ -5020,6 +6997,430 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::option
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{option},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::group_field
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"group_field"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [group_field]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{group_field},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: ['!field' group_name name label]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{group_field},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{group_field});
+		%item = (__RULE__ => q{group_field});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying terminal: ['!field']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_field},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\!field//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING1__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying subrule: [group_name]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{group_field},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{group_name})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::group_name($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [group_name]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{group_field},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [group_name]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_field},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{group_name}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+		Parse::RecDescent::_trace(q{Trying subrule: [name]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{group_field},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{name})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::name($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [name]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{group_field},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [name]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_field},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{name}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+		Parse::RecDescent::_trace(q{Trying repeated subrule: [label]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{group_field},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		$expectation->is(q{label})->at($text);
+		
+		unless (defined ($_tok = $thisparser->_parserepeat($text, \&Parse::RecDescent::Text::FormBuilder::Parser::label, 0, 1, $_noactions,$expectation,undef))) 
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match repeated subrule: [label]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{group_field},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched repeated subrule: [label]<< (}
+					. @$_tok . q{ times)},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_field},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{label(?)}} = $_tok;
+		push @item, $_tok;
+		
+
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_field},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		
+
+		$_tok = ($_noactions) ? 0 : do { #warn "[$thisline] $item{group_name}\n"; 
+    push @lines, [ 'group', { name => $item{name}, label => $item{'label(?)'}[0], group => $item{group_name} } ];
+    };
+		unless (defined $_tok)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
+					if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION1__}=$_tok;
+		
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: ['!field' group_name name label]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_field},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{group_field},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{group_field},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{group_field},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{group_field},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::validate
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"validate"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [validate]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{validate},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: ['//' optional_pattern, or required_pattern]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{validate});
+		%item = (__RULE__ => q{validate});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying terminal: ['//']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\/\///)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING1__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying subrule: [_alternation_1_of_production_1_of_rule_validate]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{validate},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{optional_pattern, or required_pattern})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_validate($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [_alternation_1_of_production_1_of_rule_validate]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{validate},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [_alternation_1_of_production_1_of_rule_validate]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{_alternation_1_of_production_1_of_rule_validate}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		
+
+		$_tok = ($_noactions) ? 0 : do { $item[2] };
+		unless (defined $_tok)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
+					if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION1__}=$_tok;
+		
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: ['//' optional_pattern, or required_pattern]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{validate},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{validate},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{validate},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{validate},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -5172,166 +7573,6 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::list_var
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{list_var},
-					  $tracelevel)
-	}
-	$_[1] = $text;
-	return $return;
-}
-
-# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
-sub Parse::RecDescent::Text::FormBuilder::Parser::validate
-{
-	my $thisparser = $_[0];
-	use vars q{$tracelevel};
-	local $tracelevel = ($tracelevel||0)+1;
-	$ERRORS = 0;
-	my $thisrule = $thisparser->{"rules"}{"validate"};
-	
-	Parse::RecDescent::_trace(q{Trying rule: [validate]},
-				  Parse::RecDescent::_tracefirst($_[1]),
-				  q{validate},
-				  $tracelevel)
-					if defined $::RD_TRACE;
-
-	
-	my $err_at = @{$thisparser->{errors}};
-
-	my $score;
-	my $score_return;
-	my $_tok;
-	my $return = undef;
-	my $_matched=0;
-	my $commit=0;
-	my @item = ();
-	my %item = ();
-	my $repeating =  defined($_[2]) && $_[2];
-	my $_noactions = defined($_[3]) && $_[3];
- 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
-	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
-	my $text;
-	my $lastsep="";
-	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
-	$expectation->at($_[1]);
-	
-	my $thisline;
-	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
-
-	
-
-	while (!$_matched && !$commit)
-	{
-		
-		Parse::RecDescent::_trace(q{Trying production: ['//' value]},
-					  Parse::RecDescent::_tracefirst($_[1]),
-					  q{validate},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		my $thisprod = $thisrule->{"prods"}[0];
-		$text = $_[1];
-		my $_savetext;
-		@item = (q{validate});
-		%item = (__RULE__ => q{validate});
-		my $repcount = 0;
-
-
-		Parse::RecDescent::_trace(q{Trying terminal: ['//']},
-					  Parse::RecDescent::_tracefirst($text),
-					  q{validate},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$lastsep = "";
-		$expectation->is(q{})->at($text);
-		
-
-		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A\/\///)
-		{
-			
-			$expectation->failed();
-			Parse::RecDescent::_trace(qq{<<Didn't match terminal>>},
-						  Parse::RecDescent::_tracefirst($text))
-							if defined $::RD_TRACE;
-			last;
-		}
-		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
-						. $& . q{])},
-						  Parse::RecDescent::_tracefirst($text))
-							if defined $::RD_TRACE;
-		push @item, $item{__STRING1__}=$&;
-		
-
-		Parse::RecDescent::_trace(q{Trying subrule: [value]},
-				  Parse::RecDescent::_tracefirst($text),
-				  q{validate},
-				  $tracelevel)
-					if defined $::RD_TRACE;
-		if (1) { no strict qw{refs};
-		$expectation->is(q{value})->at($text);
-		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::value($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
-		{
-			
-			Parse::RecDescent::_trace(q{<<Didn't match subrule: [value]>>},
-						  Parse::RecDescent::_tracefirst($text),
-						  q{validate},
-						  $tracelevel)
-							if defined $::RD_TRACE;
-			$expectation->failed();
-			last;
-		}
-		Parse::RecDescent::_trace(q{>>Matched subrule: [value]<< (return value: [}
-					. $_tok . q{]},
-					  
-					  Parse::RecDescent::_tracefirst($text),
-					  q{validate},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$item{q{value}} = $_tok;
-		push @item, $_tok;
-		
-		}
-
-
-		Parse::RecDescent::_trace(q{>>Matched production: ['//' value]<<},
-					  Parse::RecDescent::_tracefirst($text),
-					  q{validate},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$_matched = 1;
-		last;
-	}
-
-
-        unless ( $_matched || defined($return) || defined($score) )
-	{
-		
-
-		$_[1] = $text;	# NOT SURE THIS IS NEEDED
-		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
-					 Parse::RecDescent::_tracefirst($_[1]),
-					 q{validate},
-					 $tracelevel)
-					if defined $::RD_TRACE;
-		return undef;
-	}
-	if (!defined($return) && defined($score))
-	{
-		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
-					  q{validate},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$return = $score_return;
-	}
-	splice @{$thisparser->{errors}}, $err_at;
-	$return = $item[$#item] unless defined $return;
-	if (defined $::RD_TRACE)
-	{
-		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
-					  $return . q{])}, "",
-					  q{validate},
-					  $tracelevel);
-		Parse::RecDescent::_trace(q{(consumed: [} .
-					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
-					  Parse::RecDescent::_tracefirst($text),
-					  , q{validate},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -5609,12 +7850,69 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1
 	while (!$_matched && !$commit)
 	{
 		
-		Parse::RecDescent::_trace(q{Trying production: [unknown_directive]},
+		Parse::RecDescent::_trace(q{Trying production: [group_field]},
 					  Parse::RecDescent::_tracefirst($_[1]),
 					  q{_alternation_1_of_production_1_of_rule_line},
 					  $tracelevel)
 						if defined $::RD_TRACE;
 		my $thisprod = $thisrule->{"prods"}[4];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_line});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_line});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [group_field]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_line},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::group_field($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [group_field]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_line},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [group_field]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{group_field}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [group_field]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [unknown_directive]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_line},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[5];
 		$text = $_[1];
 		my $_savetext;
 		@item = (q{_alternation_1_of_production_1_of_rule_line});
@@ -5671,7 +7969,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1
 					  q{_alternation_1_of_production_1_of_rule_line},
 					  $tracelevel)
 						if defined $::RD_TRACE;
-		my $thisprod = $thisrule->{"prods"}[5];
+		my $thisprod = $thisrule->{"prods"}[6];
 		$text = $_[1];
 		my $_savetext;
 		@item = (q{_alternation_1_of_production_1_of_rule_line});
@@ -5728,7 +8026,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1
 					  q{_alternation_1_of_production_1_of_rule_line},
 					  $tracelevel)
 						if defined $::RD_TRACE;
-		my $thisprod = $thisrule->{"prods"}[6];
+		my $thisprod = $thisrule->{"prods"}[7];
 		$text = $_[1];
 		my $_savetext;
 		@item = (q{_alternation_1_of_production_1_of_rule_line});
@@ -5785,7 +8083,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1
 					  q{_alternation_1_of_production_1_of_rule_line},
 					  $tracelevel)
 						if defined $::RD_TRACE;
-		my $thisprod = $thisrule->{"prods"}[7];
+		my $thisprod = $thisrule->{"prods"}[8];
 		$text = $_[1];
 		my $_savetext;
 		@item = (q{_alternation_1_of_production_1_of_rule_line});
@@ -5866,6 +8164,136 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{_alternation_1_of_production_1_of_rule_line},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::group_name
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"group_name"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [group_name]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{group_name},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [/%[A-Z_]+/]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{group_name},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{group_name});
+		%item = (__RULE__ => q{group_name});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying terminal: [/%[A-Z_]+/]}, Parse::RecDescent::_tracefirst($text),
+					  q{group_name},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:%[A-Z_]+)//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+		push @item, $item{__PATTERN1__}=$&;
+		
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [/%[A-Z_]+/]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{group_name},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{group_name},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{group_name},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{group_name},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{group_name},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -6058,198 +8486,6 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{_alternation_1_of_production_1_of_rule_field_size},
-					  $tracelevel)
-	}
-	$_[1] = $text;
-	return $return;
-}
-
-# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
-sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_list_def
-{
-	my $thisparser = $_[0];
-	use vars q{$tracelevel};
-	local $tracelevel = ($tracelevel||0)+1;
-	$ERRORS = 0;
-	my $thisrule = $thisparser->{"rules"}{"_alternation_1_of_production_1_of_rule_list_def"};
-	
-	Parse::RecDescent::_trace(q{Trying rule: [_alternation_1_of_production_1_of_rule_list_def]},
-				  Parse::RecDescent::_tracefirst($_[1]),
-				  q{_alternation_1_of_production_1_of_rule_list_def},
-				  $tracelevel)
-					if defined $::RD_TRACE;
-
-	
-	my $err_at = @{$thisparser->{errors}};
-
-	my $score;
-	my $score_return;
-	my $_tok;
-	my $return = undef;
-	my $_matched=0;
-	my $commit=0;
-	my @item = ();
-	my %item = ();
-	my $repeating =  defined($_[2]) && $_[2];
-	my $_noactions = defined($_[3]) && $_[3];
- 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
-	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
-	my $text;
-	my $lastsep="";
-	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
-	$expectation->at($_[1]);
-	
-	my $thisline;
-	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
-
-	
-
-	while (!$_matched && !$commit)
-	{
-		
-		Parse::RecDescent::_trace(q{Trying production: [static_list]},
-					  Parse::RecDescent::_tracefirst($_[1]),
-					  q{_alternation_1_of_production_1_of_rule_list_def},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		my $thisprod = $thisrule->{"prods"}[0];
-		$text = $_[1];
-		my $_savetext;
-		@item = (q{_alternation_1_of_production_1_of_rule_list_def});
-		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_list_def});
-		my $repcount = 0;
-
-
-		Parse::RecDescent::_trace(q{Trying subrule: [static_list]},
-				  Parse::RecDescent::_tracefirst($text),
-				  q{_alternation_1_of_production_1_of_rule_list_def},
-				  $tracelevel)
-					if defined $::RD_TRACE;
-		if (1) { no strict qw{refs};
-		$expectation->is(q{})->at($text);
-		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::static_list($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
-		{
-			
-			Parse::RecDescent::_trace(q{<<Didn't match subrule: [static_list]>>},
-						  Parse::RecDescent::_tracefirst($text),
-						  q{_alternation_1_of_production_1_of_rule_list_def},
-						  $tracelevel)
-							if defined $::RD_TRACE;
-			$expectation->failed();
-			last;
-		}
-		Parse::RecDescent::_trace(q{>>Matched subrule: [static_list]<< (return value: [}
-					. $_tok . q{]},
-					  
-					  Parse::RecDescent::_tracefirst($text),
-					  q{_alternation_1_of_production_1_of_rule_list_def},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$item{q{static_list}} = $_tok;
-		push @item, $_tok;
-		
-		}
-
-
-		Parse::RecDescent::_trace(q{>>Matched production: [static_list]<<},
-					  Parse::RecDescent::_tracefirst($text),
-					  q{_alternation_1_of_production_1_of_rule_list_def},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$_matched = 1;
-		last;
-	}
-
-
-	while (!$_matched && !$commit)
-	{
-		
-		Parse::RecDescent::_trace(q{Trying production: [dynamic_list]},
-					  Parse::RecDescent::_tracefirst($_[1]),
-					  q{_alternation_1_of_production_1_of_rule_list_def},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		my $thisprod = $thisrule->{"prods"}[1];
-		$text = $_[1];
-		my $_savetext;
-		@item = (q{_alternation_1_of_production_1_of_rule_list_def});
-		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_list_def});
-		my $repcount = 0;
-
-
-		Parse::RecDescent::_trace(q{Trying subrule: [dynamic_list]},
-				  Parse::RecDescent::_tracefirst($text),
-				  q{_alternation_1_of_production_1_of_rule_list_def},
-				  $tracelevel)
-					if defined $::RD_TRACE;
-		if (1) { no strict qw{refs};
-		$expectation->is(q{})->at($text);
-		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::dynamic_list($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
-		{
-			
-			Parse::RecDescent::_trace(q{<<Didn't match subrule: [dynamic_list]>>},
-						  Parse::RecDescent::_tracefirst($text),
-						  q{_alternation_1_of_production_1_of_rule_list_def},
-						  $tracelevel)
-							if defined $::RD_TRACE;
-			$expectation->failed();
-			last;
-		}
-		Parse::RecDescent::_trace(q{>>Matched subrule: [dynamic_list]<< (return value: [}
-					. $_tok . q{]},
-					  
-					  Parse::RecDescent::_tracefirst($text),
-					  q{_alternation_1_of_production_1_of_rule_list_def},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$item{q{dynamic_list}} = $_tok;
-		push @item, $_tok;
-		
-		}
-
-
-		Parse::RecDescent::_trace(q{>>Matched production: [dynamic_list]<<},
-					  Parse::RecDescent::_tracefirst($text),
-					  q{_alternation_1_of_production_1_of_rule_list_def},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$_matched = 1;
-		last;
-	}
-
-
-        unless ( $_matched || defined($return) || defined($score) )
-	{
-		
-
-		$_[1] = $text;	# NOT SURE THIS IS NEEDED
-		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
-					 Parse::RecDescent::_tracefirst($_[1]),
-					 q{_alternation_1_of_production_1_of_rule_list_def},
-					 $tracelevel)
-					if defined $::RD_TRACE;
-		return undef;
-	}
-	if (!defined($return) && defined($score))
-	{
-		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
-					  q{_alternation_1_of_production_1_of_rule_list_def},
-					  $tracelevel)
-						if defined $::RD_TRACE;
-		$return = $score_return;
-	}
-	splice @{$thisparser->{errors}}, $err_at;
-	$return = $item[$#item] unless defined $return;
-	if (defined $::RD_TRACE)
-	{
-		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
-					  $return . q{])}, "",
-					  q{_alternation_1_of_production_1_of_rule_list_def},
-					  $tracelevel);
-		Parse::RecDescent::_trace(q{(consumed: [} .
-					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
-					  Parse::RecDescent::_tracefirst($text),
-					  , q{_alternation_1_of_production_1_of_rule_list_def},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -6452,6 +8688,432 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::display_text
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{display_text},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_list_def
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"_alternation_1_of_production_1_of_rule_list_def"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [_alternation_1_of_production_1_of_rule_list_def]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{_alternation_1_of_production_1_of_rule_list_def},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [static_list]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_list_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_list_def});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_list_def});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [static_list]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_list_def},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::static_list($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [static_list]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_list_def},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [static_list]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_list_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{static_list}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [static_list]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_list_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [dynamic_list]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_list_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[1];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_list_def});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_list_def});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [dynamic_list]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_list_def},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::dynamic_list($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [dynamic_list]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_list_def},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [dynamic_list]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_list_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{dynamic_list}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [dynamic_list]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_list_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{_alternation_1_of_production_1_of_rule_list_def},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{_alternation_1_of_production_1_of_rule_list_def},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{_alternation_1_of_production_1_of_rule_list_def},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{_alternation_1_of_production_1_of_rule_list_def},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::quoted_string
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"quoted_string"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [quoted_string]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{quoted_string},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		local $skip = defined($skip) ? $skip : $Parse::RecDescent::skip;
+		Parse::RecDescent::_trace(q{Trying production: [<skip:''> ''' /(\\\\'|[^'])*/ ''']},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{quoted_string},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{quoted_string});
+		%item = (__RULE__ => q{quoted_string});
+		my $repcount = 0;
+
+
+		
+
+		Parse::RecDescent::_trace(q{Trying directive: [<skip:''>]},
+					Parse::RecDescent::_tracefirst($text),
+					  q{quoted_string},
+					  $tracelevel)
+						if defined $::RD_TRACE; 
+		$_tok = do { my $oldskip = $skip; $skip=''; $oldskip };
+		if (defined($_tok))
+		{
+			Parse::RecDescent::_trace(q{>>Matched directive<< (return value: [}
+						. $_tok . q{])},
+						Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		}
+		else
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match directive>>},
+						Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		}
+		
+		last unless defined $_tok;
+		push @item, $item{__DIRECTIVE1__}=$_tok;
+		
+
+		Parse::RecDescent::_trace(q{Trying terminal: [''']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{quoted_string},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{'''})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   do { $_tok = "'"; 1 } and
+		     substr($text,0,length($_tok)) eq $_tok and
+		     do { substr($text,0,length($_tok)) = ""; 1; }
+		)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $_tok . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING1__}=$_tok;
+		
+
+		Parse::RecDescent::_trace(q{Trying terminal: [/(\\\\'|[^'])*/]}, Parse::RecDescent::_tracefirst($text),
+					  q{quoted_string},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{/(\\\\'|[^'])*/})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:(\\'|[^'])*)//)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $& . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+					if defined $::RD_TRACE;
+		push @item, $item{__PATTERN1__}=$&;
+		
+
+		Parse::RecDescent::_trace(q{Trying terminal: [''']},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{quoted_string},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$lastsep = "";
+		$expectation->is(q{'''})->at($text);
+		
+
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   do { $_tok = "'"; 1 } and
+		     substr($text,0,length($_tok)) eq $_tok and
+		     do { substr($text,0,length($_tok)) = ""; 1; }
+		)
+		{
+			
+			$expectation->failed();
+			Parse::RecDescent::_trace(q{<<Didn't match terminal>>},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched terminal<< (return value: [}
+						. $_tok . q{])},
+						  Parse::RecDescent::_tracefirst($text))
+							if defined $::RD_TRACE;
+		push @item, $item{__STRING2__}=$_tok;
+		
+
+		Parse::RecDescent::_trace(q{Trying action},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{quoted_string},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		
+
+		$_tok = ($_noactions) ? 0 : do { $item[3] =~ s/\\'/'/g; $item[3] };
+		unless (defined $_tok)
+		{
+			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
+					if defined $::RD_TRACE;
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched action<< (return value: [}
+					  . $_tok . q{])},
+					  Parse::RecDescent::_tracefirst($text))
+						if defined $::RD_TRACE;
+		push @item, $_tok;
+		$item{__ACTION1__}=$_tok;
+		
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [<skip:''> ''' /(\\\\'|[^'])*/ ''']<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{quoted_string},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{quoted_string},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{quoted_string},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{quoted_string},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{quoted_string},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -6737,6 +9399,255 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::comment
 					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
 					  Parse::RecDescent::_tracefirst($text),
 					  , q{comment},
+					  $tracelevel)
+	}
+	$_[1] = $text;
+	return $return;
+}
+
+# ARGS ARE: ($parser, $text; $repeating, $_noactions, \@args)
+sub Parse::RecDescent::Text::FormBuilder::Parser::_alternation_1_of_production_1_of_rule_option
+{
+	my $thisparser = $_[0];
+	use vars q{$tracelevel};
+	local $tracelevel = ($tracelevel||0)+1;
+	$ERRORS = 0;
+	my $thisrule = $thisparser->{"rules"}{"_alternation_1_of_production_1_of_rule_option"};
+	
+	Parse::RecDescent::_trace(q{Trying rule: [_alternation_1_of_production_1_of_rule_option]},
+				  Parse::RecDescent::_tracefirst($_[1]),
+				  q{_alternation_1_of_production_1_of_rule_option},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+
+	
+	my $err_at = @{$thisparser->{errors}};
+
+	my $score;
+	my $score_return;
+	my $_tok;
+	my $return = undef;
+	my $_matched=0;
+	my $commit=0;
+	my @item = ();
+	my %item = ();
+	my $repeating =  defined($_[2]) && $_[2];
+	my $_noactions = defined($_[3]) && $_[3];
+ 	my @arg =        defined $_[4] ? @{ &{$_[4]} } : ();
+	my %arg =        ($#arg & 01) ? @arg : (@arg, undef);
+	my $text;
+	my $lastsep="";
+	my $expectation = new Parse::RecDescent::Expectation($thisrule->expected());
+	$expectation->at($_[1]);
+	
+	my $thisline;
+	tie $thisline, q{Parse::RecDescent::LineCounter}, \$text, $thisparser;
+
+	
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [simple_multiword]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[0];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_option});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_option});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [simple_multiword]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_option},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::simple_multiword($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [simple_multiword]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_option},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [simple_multiword]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{simple_multiword}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [simple_multiword]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [value]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[1];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_option});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_option});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [value]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_option},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::value($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [value]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_option},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [value]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{value}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [value]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+	while (!$_matched && !$commit)
+	{
+		
+		Parse::RecDescent::_trace(q{Trying production: [quoted_string]},
+					  Parse::RecDescent::_tracefirst($_[1]),
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		my $thisprod = $thisrule->{"prods"}[2];
+		$text = $_[1];
+		my $_savetext;
+		@item = (q{_alternation_1_of_production_1_of_rule_option});
+		%item = (__RULE__ => q{_alternation_1_of_production_1_of_rule_option});
+		my $repcount = 0;
+
+
+		Parse::RecDescent::_trace(q{Trying subrule: [quoted_string]},
+				  Parse::RecDescent::_tracefirst($text),
+				  q{_alternation_1_of_production_1_of_rule_option},
+				  $tracelevel)
+					if defined $::RD_TRACE;
+		if (1) { no strict qw{refs};
+		$expectation->is(q{})->at($text);
+		unless (defined ($_tok = Parse::RecDescent::Text::FormBuilder::Parser::quoted_string($thisparser,$text,$repeating,$_noactions,sub { \@arg })))
+		{
+			
+			Parse::RecDescent::_trace(q{<<Didn't match subrule: [quoted_string]>>},
+						  Parse::RecDescent::_tracefirst($text),
+						  q{_alternation_1_of_production_1_of_rule_option},
+						  $tracelevel)
+							if defined $::RD_TRACE;
+			$expectation->failed();
+			last;
+		}
+		Parse::RecDescent::_trace(q{>>Matched subrule: [quoted_string]<< (return value: [}
+					. $_tok . q{]},
+					  
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$item{q{quoted_string}} = $_tok;
+		push @item, $_tok;
+		
+		}
+
+
+		Parse::RecDescent::_trace(q{>>Matched production: [quoted_string]<<},
+					  Parse::RecDescent::_tracefirst($text),
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$_matched = 1;
+		last;
+	}
+
+
+        unless ( $_matched || defined($return) || defined($score) )
+	{
+		
+
+		$_[1] = $text;	# NOT SURE THIS IS NEEDED
+		Parse::RecDescent::_trace(q{<<Didn't match rule>>},
+					 Parse::RecDescent::_tracefirst($_[1]),
+					 q{_alternation_1_of_production_1_of_rule_option},
+					 $tracelevel)
+					if defined $::RD_TRACE;
+		return undef;
+	}
+	if (!defined($return) && defined($score))
+	{
+		Parse::RecDescent::_trace(q{>>Accepted scored production<<}, "",
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel)
+						if defined $::RD_TRACE;
+		$return = $score_return;
+	}
+	splice @{$thisparser->{errors}}, $err_at;
+	$return = $item[$#item] unless defined $return;
+	if (defined $::RD_TRACE)
+	{
+		Parse::RecDescent::_trace(q{>>Matched rule<< (return value: [} .
+					  $return . q{])}, "",
+					  q{_alternation_1_of_production_1_of_rule_option},
+					  $tracelevel);
+		Parse::RecDescent::_trace(q{(consumed: [} .
+					  Parse::RecDescent::_tracemax(substr($_[1],0,-length($text))) . q{])}, 
+					  Parse::RecDescent::_tracefirst($text),
+					  , q{_alternation_1_of_production_1_of_rule_option},
 					  $tracelevel)
 	}
 	$_[1] = $text;
@@ -7104,7 +10015,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'description' => '/\\\\d+/',
                                                                                                 'lookahead' => 0,
                                                                                                 'rdelim' => '/',
-                                                                                                'line' => 94,
+                                                                                                'line' => 146,
                                                                                                 'mod' => '',
                                                                                                 'ldelim' => '/'
                                                                                               }, 'Parse::RecDescent::Token' ),
@@ -7114,7 +10025,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'description' => '/,\\\\s*/',
                                                                                                 'lookahead' => 0,
                                                                                                 'rdelim' => '/',
-                                                                                                'line' => 94,
+                                                                                                'line' => 146,
                                                                                                 'mod' => '',
                                                                                                 'ldelim' => '/'
                                                                                               }, 'Parse::RecDescent::Token' ),
@@ -7124,14 +10035,14 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'description' => '/\\\\d+/',
                                                                                                 'lookahead' => 0,
                                                                                                 'rdelim' => '/',
-                                                                                                'line' => 94,
+                                                                                                'line' => 146,
                                                                                                 'mod' => '',
                                                                                                 'ldelim' => '/'
                                                                                               }, 'Parse::RecDescent::Token' ),
                                                                                        bless( {
                                                                                                 'hashname' => '__ACTION1__',
                                                                                                 'lookahead' => 0,
-                                                                                                'line' => 95,
+                                                                                                'line' => 147,
                                                                                                 'code' => '{ $rows = $item[1]; $cols = $item[3] }'
                                                                                               }, 'Parse::RecDescent::Action' )
                                                                                      ],
@@ -7140,8 +10051,96 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                ],
                                                     'name' => 'row_col',
                                                     'vars' => '',
-                                                    'line' => 94
+                                                    'line' => 146
                                                   }, 'Parse::RecDescent::Rule' ),
+                              'group_def' => bless( {
+                                                      'impcount' => 0,
+                                                      'calls' => [
+                                                                   'var_name',
+                                                                   'field_line'
+                                                                 ],
+                                                      'changed' => 0,
+                                                      'opcount' => 0,
+                                                      'prods' => [
+                                                                   bless( {
+                                                                            'number' => '0',
+                                                                            'strcount' => 3,
+                                                                            'dircount' => 0,
+                                                                            'uncommit' => undef,
+                                                                            'error' => undef,
+                                                                            'patcount' => 0,
+                                                                            'actcount' => 3,
+                                                                            'items' => [
+                                                                                         bless( {
+                                                                                                  'pattern' => '!group',
+                                                                                                  'hashname' => '__STRING1__',
+                                                                                                  'description' => '\'!group\'',
+                                                                                                  'lookahead' => 0,
+                                                                                                  'line' => 62
+                                                                                                }, 'Parse::RecDescent::Literal' ),
+                                                                                         bless( {
+                                                                                                  'hashname' => '__ACTION1__',
+                                                                                                  'lookahead' => 0,
+                                                                                                  'line' => 62,
+                                                                                                  'code' => '{ $context = \'group\' }'
+                                                                                                }, 'Parse::RecDescent::Action' ),
+                                                                                         bless( {
+                                                                                                  'subrule' => 'var_name',
+                                                                                                  'matchrule' => 0,
+                                                                                                  'implicit' => undef,
+                                                                                                  'argcode' => undef,
+                                                                                                  'lookahead' => 0,
+                                                                                                  'line' => 62
+                                                                                                }, 'Parse::RecDescent::Subrule' ),
+                                                                                         bless( {
+                                                                                                  'pattern' => '{',
+                                                                                                  'hashname' => '__STRING2__',
+                                                                                                  'description' => '\'\\{\'',
+                                                                                                  'lookahead' => 0,
+                                                                                                  'line' => 62
+                                                                                                }, 'Parse::RecDescent::Literal' ),
+                                                                                         bless( {
+                                                                                                  'subrule' => 'field_line',
+                                                                                                  'expected' => undef,
+                                                                                                  'min' => 1,
+                                                                                                  'argcode' => undef,
+                                                                                                  'max' => 100000000,
+                                                                                                  'matchrule' => 0,
+                                                                                                  'repspec' => 's',
+                                                                                                  'lookahead' => 0,
+                                                                                                  'line' => 62
+                                                                                                }, 'Parse::RecDescent::Repetition' ),
+                                                                                         bless( {
+                                                                                                  'pattern' => '}',
+                                                                                                  'hashname' => '__STRING3__',
+                                                                                                  'description' => '\'\\}\'',
+                                                                                                  'lookahead' => 0,
+                                                                                                  'line' => 62
+                                                                                                }, 'Parse::RecDescent::Literal' ),
+                                                                                         bless( {
+                                                                                                  'hashname' => '__ACTION2__',
+                                                                                                  'lookahead' => 0,
+                                                                                                  'line' => 62,
+                                                                                                  'code' => '{ $context = \'line\' }'
+                                                                                                }, 'Parse::RecDescent::Action' ),
+                                                                                         bless( {
+                                                                                                  'hashname' => '__ACTION3__',
+                                                                                                  'lookahead' => 0,
+                                                                                                  'line' => 63,
+                                                                                                  'code' => '{ 
+	#warn "$item{var_name} group; context $context\\n"
+	$groups{$item{var_name}} = [ @group ];
+	@group = ();
+    }'
+                                                                                                }, 'Parse::RecDescent::Action' )
+                                                                                       ],
+                                                                            'line' => undef
+                                                                          }, 'Parse::RecDescent::Production' )
+                                                                 ],
+                                                      'name' => 'group_def',
+                                                      'vars' => '',
+                                                      'line' => 62
+                                                    }, 'Parse::RecDescent::Rule' ),
                               'field_size' => bless( {
                                                        'impcount' => 1,
                                                        'calls' => [
@@ -7164,7 +10163,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                    'hashname' => '__STRING1__',
                                                                                                    'description' => '\'[\'',
                                                                                                    'lookahead' => 0,
-                                                                                                   'line' => 89
+                                                                                                   'line' => 141
                                                                                                  }, 'Parse::RecDescent::Literal' ),
                                                                                           bless( {
                                                                                                    'subrule' => '_alternation_1_of_production_1_of_rule_field_size',
@@ -7172,14 +10171,14 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                    'implicit' => 'row_col, or size',
                                                                                                    'argcode' => undef,
                                                                                                    'lookahead' => 0,
-                                                                                                   'line' => 89
+                                                                                                   'line' => 141
                                                                                                  }, 'Parse::RecDescent::Subrule' ),
                                                                                           bless( {
                                                                                                    'pattern' => ']',
                                                                                                    'hashname' => '__STRING2__',
                                                                                                    'description' => '\']\'',
                                                                                                    'lookahead' => 0,
-                                                                                                   'line' => 89
+                                                                                                   'line' => 141
                                                                                                  }, 'Parse::RecDescent::Literal' )
                                                                                         ],
                                                                              'line' => undef
@@ -7187,7 +10186,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                   ],
                                                        'name' => 'field_size',
                                                        'vars' => '',
-                                                       'line' => 89
+                                                       'line' => 141
                                                      }, 'Parse::RecDescent::Rule' ),
                               'heading' => bless( {
                                                     'impcount' => 0,
@@ -7209,7 +10208,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'hashname' => '__STRING1__',
                                                                                                 'description' => '\'!head\'',
                                                                                                 'lookahead' => 0,
-                                                                                                'line' => 52
+                                                                                                'line' => 84
                                                                                               }, 'Parse::RecDescent::Literal' ),
                                                                                        bless( {
                                                                                                 'pattern' => '.*',
@@ -7217,16 +10216,19 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'description' => '/.*/',
                                                                                                 'lookahead' => 0,
                                                                                                 'rdelim' => '/',
-                                                                                                'line' => 52,
+                                                                                                'line' => 84,
                                                                                                 'mod' => '',
                                                                                                 'ldelim' => '/'
                                                                                               }, 'Parse::RecDescent::Token' ),
                                                                                        bless( {
                                                                                                 'hashname' => '__ACTION1__',
                                                                                                 'lookahead' => 0,
-                                                                                                'line' => 53,
-                                                                                                'code' => '{ warn "[Text::FormBuilder] Header before field " . scalar(@fields) . " redefined at input text line $thisline\\n" if defined $headings[@fields];
-    $headings[@fields] = $item[2] }'
+                                                                                                'line' => 85,
+                                                                                                'code' => '{
+	warn "[Text::FormBuilder] Header before field " . scalar(@fields) . " redefined at input text line $thisline\\n" if defined $headings[@fields];
+	$headings[@fields] = $item[2];
+	push @lines, [ \'head\', $item[2] ];
+    }'
                                                                                               }, 'Parse::RecDescent::Action' )
                                                                                      ],
                                                                           'line' => undef
@@ -7234,8 +10236,62 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                ],
                                                     'name' => 'heading',
                                                     'vars' => '',
-                                                    'line' => 52
+                                                    'line' => 84
                                                   }, 'Parse::RecDescent::Rule' ),
+                              '_alternation_1_of_production_1_of_rule_validate' => bless( {
+                                                                                            'impcount' => 0,
+                                                                                            'calls' => [
+                                                                                                         'optional_pattern',
+                                                                                                         'required_pattern'
+                                                                                                       ],
+                                                                                            'changed' => 0,
+                                                                                            'opcount' => 0,
+                                                                                            'prods' => [
+                                                                                                         bless( {
+                                                                                                                  'number' => '0',
+                                                                                                                  'strcount' => 0,
+                                                                                                                  'dircount' => 0,
+                                                                                                                  'uncommit' => undef,
+                                                                                                                  'error' => undef,
+                                                                                                                  'patcount' => 0,
+                                                                                                                  'actcount' => 0,
+                                                                                                                  'items' => [
+                                                                                                                               bless( {
+                                                                                                                                        'subrule' => 'optional_pattern',
+                                                                                                                                        'matchrule' => 0,
+                                                                                                                                        'implicit' => undef,
+                                                                                                                                        'argcode' => undef,
+                                                                                                                                        'lookahead' => 0,
+                                                                                                                                        'line' => 192
+                                                                                                                                      }, 'Parse::RecDescent::Subrule' )
+                                                                                                                             ],
+                                                                                                                  'line' => undef
+                                                                                                                }, 'Parse::RecDescent::Production' ),
+                                                                                                         bless( {
+                                                                                                                  'number' => '1',
+                                                                                                                  'strcount' => 0,
+                                                                                                                  'dircount' => 0,
+                                                                                                                  'uncommit' => undef,
+                                                                                                                  'error' => undef,
+                                                                                                                  'patcount' => 0,
+                                                                                                                  'actcount' => 0,
+                                                                                                                  'items' => [
+                                                                                                                               bless( {
+                                                                                                                                        'subrule' => 'required_pattern',
+                                                                                                                                        'matchrule' => 0,
+                                                                                                                                        'implicit' => undef,
+                                                                                                                                        'argcode' => undef,
+                                                                                                                                        'lookahead' => 0,
+                                                                                                                                        'line' => 192
+                                                                                                                                      }, 'Parse::RecDescent::Subrule' )
+                                                                                                                             ],
+                                                                                                                  'line' => 192
+                                                                                                                }, 'Parse::RecDescent::Production' )
+                                                                                                       ],
+                                                                                            'name' => '_alternation_1_of_production_1_of_rule_validate',
+                                                                                            'vars' => '',
+                                                                                            'line' => 192
+                                                                                          }, 'Parse::RecDescent::Rule' ),
                               'identifier' => bless( {
                                                        'impcount' => 0,
                                                        'calls' => [],
@@ -7257,7 +10313,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                    'description' => '/\\\\w+/',
                                                                                                    'lookahead' => 0,
                                                                                                    'rdelim' => '/',
-                                                                                                   'line' => 123,
+                                                                                                   'line' => 187,
                                                                                                    'mod' => '',
                                                                                                    'ldelim' => '/'
                                                                                                  }, 'Parse::RecDescent::Token' )
@@ -7267,8 +10323,62 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                   ],
                                                        'name' => 'identifier',
                                                        'vars' => '',
-                                                       'line' => 123
+                                                       'line' => 187
                                                      }, 'Parse::RecDescent::Rule' ),
+                              '_alternation_1_of_production_1_of_rule_default' => bless( {
+                                                                                           'impcount' => 0,
+                                                                                           'calls' => [
+                                                                                                        'simple_multiword',
+                                                                                                        'quoted_string'
+                                                                                                      ],
+                                                                                           'changed' => 0,
+                                                                                           'opcount' => 0,
+                                                                                           'prods' => [
+                                                                                                        bless( {
+                                                                                                                 'number' => '0',
+                                                                                                                 'strcount' => 0,
+                                                                                                                 'dircount' => 0,
+                                                                                                                 'uncommit' => undef,
+                                                                                                                 'error' => undef,
+                                                                                                                 'patcount' => 0,
+                                                                                                                 'actcount' => 0,
+                                                                                                                 'items' => [
+                                                                                                                              bless( {
+                                                                                                                                       'subrule' => 'simple_multiword',
+                                                                                                                                       'matchrule' => 0,
+                                                                                                                                       'implicit' => undef,
+                                                                                                                                       'argcode' => undef,
+                                                                                                                                       'lookahead' => 0,
+                                                                                                                                       'line' => 192
+                                                                                                                                     }, 'Parse::RecDescent::Subrule' )
+                                                                                                                            ],
+                                                                                                                 'line' => undef
+                                                                                                               }, 'Parse::RecDescent::Production' ),
+                                                                                                        bless( {
+                                                                                                                 'number' => '1',
+                                                                                                                 'strcount' => 0,
+                                                                                                                 'dircount' => 0,
+                                                                                                                 'uncommit' => undef,
+                                                                                                                 'error' => undef,
+                                                                                                                 'patcount' => 0,
+                                                                                                                 'actcount' => 0,
+                                                                                                                 'items' => [
+                                                                                                                              bless( {
+                                                                                                                                       'subrule' => 'quoted_string',
+                                                                                                                                       'matchrule' => 0,
+                                                                                                                                       'implicit' => undef,
+                                                                                                                                       'argcode' => undef,
+                                                                                                                                       'lookahead' => 0,
+                                                                                                                                       'line' => 192
+                                                                                                                                     }, 'Parse::RecDescent::Subrule' )
+                                                                                                                            ],
+                                                                                                                 'line' => 192
+                                                                                                               }, 'Parse::RecDescent::Production' )
+                                                                                                      ],
+                                                                                           'name' => '_alternation_1_of_production_1_of_rule_default',
+                                                                                           'vars' => '',
+                                                                                           'line' => 192
+                                                                                         }, 'Parse::RecDescent::Rule' ),
                               'blank' => bless( {
                                                   'impcount' => 0,
                                                   'calls' => [],
@@ -7289,7 +10399,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                              ],
                                                   'name' => 'blank',
                                                   'vars' => '',
-                                                  'line' => 121
+                                                  'line' => 185
                                                 }, 'Parse::RecDescent::Rule' ),
                               'unknown_directive' => bless( {
                                                               'impcount' => 0,
@@ -7312,7 +10422,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                           'description' => '/\\\\!\\\\S*/',
                                                                                                           'lookahead' => 0,
                                                                                                           'rdelim' => '/',
-                                                                                                          'line' => 126,
+                                                                                                          'line' => 190,
                                                                                                           'mod' => '',
                                                                                                           'ldelim' => '/'
                                                                                                         }, 'Parse::RecDescent::Token' ),
@@ -7322,14 +10432,14 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                           'description' => '/.*/',
                                                                                                           'lookahead' => 0,
                                                                                                           'rdelim' => '/',
-                                                                                                          'line' => 126,
+                                                                                                          'line' => 190,
                                                                                                           'mod' => '',
                                                                                                           'ldelim' => '/'
                                                                                                         }, 'Parse::RecDescent::Token' ),
                                                                                                  bless( {
                                                                                                           'hashname' => '__ACTION1__',
                                                                                                           'lookahead' => 0,
-                                                                                                          'line' => 127,
+                                                                                                          'line' => 191,
                                                                                                           'code' => '{ warn "[Text::Formbuilder] Skipping unknown directive \'$item[1]\' at input text line $thisline\\n"; }'
                                                                                                         }, 'Parse::RecDescent::Action' )
                                                                                                ],
@@ -7338,8 +10448,47 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                          ],
                                                               'name' => 'unknown_directive',
                                                               'vars' => '',
-                                                              'line' => 125
+                                                              'line' => 189
                                                             }, 'Parse::RecDescent::Rule' ),
+                              'required_pattern' => bless( {
+                                                             'impcount' => 0,
+                                                             'calls' => [],
+                                                             'changed' => 0,
+                                                             'opcount' => 0,
+                                                             'prods' => [
+                                                                          bless( {
+                                                                                   'number' => '0',
+                                                                                   'strcount' => 0,
+                                                                                   'dircount' => 0,
+                                                                                   'uncommit' => undef,
+                                                                                   'error' => undef,
+                                                                                   'patcount' => 1,
+                                                                                   'actcount' => 1,
+                                                                                   'items' => [
+                                                                                                bless( {
+                                                                                                         'pattern' => '[A-Z_]+',
+                                                                                                         'hashname' => '__PATTERN1__',
+                                                                                                         'description' => '/[A-Z_]+/',
+                                                                                                         'lookahead' => 0,
+                                                                                                         'rdelim' => '/',
+                                                                                                         'line' => 182,
+                                                                                                         'mod' => '',
+                                                                                                         'ldelim' => '/'
+                                                                                                       }, 'Parse::RecDescent::Token' ),
+                                                                                                bless( {
+                                                                                                         'hashname' => '__ACTION1__',
+                                                                                                         'lookahead' => 0,
+                                                                                                         'line' => 182,
+                                                                                                         'code' => '{ $required = 1; $item[1] }'
+                                                                                                       }, 'Parse::RecDescent::Action' )
+                                                                                              ],
+                                                                                   'line' => undef
+                                                                                 }, 'Parse::RecDescent::Production' )
+                                                                        ],
+                                                             'name' => 'required_pattern',
+                                                             'vars' => '',
+                                                             'line' => 182
+                                                           }, 'Parse::RecDescent::Rule' ),
                               'field' => bless( {
                                                   'impcount' => 0,
                                                   'calls' => [
@@ -7370,7 +10519,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'implicit' => undef,
                                                                                               'argcode' => undef,
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 56
+                                                                                              'line' => 98
                                                                                             }, 'Parse::RecDescent::Subrule' ),
                                                                                      bless( {
                                                                                               'subrule' => 'field_size',
@@ -7381,7 +10530,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'matchrule' => 0,
                                                                                               'repspec' => '?',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 56
+                                                                                              'line' => 98
                                                                                             }, 'Parse::RecDescent::Repetition' ),
                                                                                      bless( {
                                                                                               'subrule' => 'label',
@@ -7392,7 +10541,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'matchrule' => 0,
                                                                                               'repspec' => '?',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 56
+                                                                                              'line' => 98
                                                                                             }, 'Parse::RecDescent::Repetition' ),
                                                                                      bless( {
                                                                                               'subrule' => 'hint',
@@ -7403,7 +10552,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'matchrule' => 0,
                                                                                               'repspec' => '?',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 56
+                                                                                              'line' => 98
                                                                                             }, 'Parse::RecDescent::Repetition' ),
                                                                                      bless( {
                                                                                               'subrule' => 'type',
@@ -7414,7 +10563,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'matchrule' => 0,
                                                                                               'repspec' => '?',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 56
+                                                                                              'line' => 98
                                                                                             }, 'Parse::RecDescent::Repetition' ),
                                                                                      bless( {
                                                                                               'subrule' => 'default',
@@ -7425,7 +10574,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'matchrule' => 0,
                                                                                               'repspec' => '?',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 56
+                                                                                              'line' => 98
                                                                                             }, 'Parse::RecDescent::Repetition' ),
                                                                                      bless( {
                                                                                               'subrule' => 'option_list',
@@ -7436,7 +10585,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'matchrule' => 0,
                                                                                               'repspec' => '?',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 56
+                                                                                              'line' => 98
                                                                                             }, 'Parse::RecDescent::Repetition' ),
                                                                                      bless( {
                                                                                               'subrule' => 'validate',
@@ -7447,12 +10596,12 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'matchrule' => 0,
                                                                                               'repspec' => '?',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 56
+                                                                                              'line' => 98
                                                                                             }, 'Parse::RecDescent::Repetition' ),
                                                                                      bless( {
                                                                                               'hashname' => '__ACTION1__',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 57,
+                                                                                              'line' => 99,
                                                                                               'code' => '{
 	my $field = {
 	    name     => $item{name},
@@ -7462,6 +10611,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
 	    value    => $item{\'default(?)\'}[0],
             list     => $list_var,
             validate => $item{\'validate(?)\'}[0],
+	    required => $required || 0,
 	};
 	
 	$$field{options} = [ @options ] if @options;
@@ -7470,9 +10620,18 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
 	$$field{cols} = $cols if defined $cols;
 	$$field{size} = $size if defined $size;
 	
-	push @fields, $field;
+	#warn "[$thisline] field $item{name}; context $context\\n";   
+	if ($context eq \'group\') {
+	    push @group, $field;
+	} else {
+	    push @fields, $field;
+	    push @lines, [ \'field\', $field ];
+	}
+	
+	#warn "field $item{name} is required" if $required;
 	
 	$type = undef;
+	$required = 0;
 	$list_var = undef;
 	$size = undef;
 	$rows = undef;
@@ -7487,83 +10646,8 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                              ],
                                                   'name' => 'field',
                                                   'vars' => '',
-                                                  'line' => 56
+                                                  'line' => 98
                                                 }, 'Parse::RecDescent::Rule' ),
-                              '_alternation_1_of_production_1_of_rule_form_spec' => bless( {
-                                                                                             'impcount' => 0,
-                                                                                             'calls' => [
-                                                                                                          'list_def',
-                                                                                                          'description_def',
-                                                                                                          'line'
-                                                                                                        ],
-                                                                                             'changed' => 0,
-                                                                                             'opcount' => 0,
-                                                                                             'prods' => [
-                                                                                                          bless( {
-                                                                                                                   'number' => '0',
-                                                                                                                   'strcount' => 0,
-                                                                                                                   'dircount' => 0,
-                                                                                                                   'uncommit' => undef,
-                                                                                                                   'error' => undef,
-                                                                                                                   'patcount' => 0,
-                                                                                                                   'actcount' => 0,
-                                                                                                                   'items' => [
-                                                                                                                                bless( {
-                                                                                                                                         'subrule' => 'list_def',
-                                                                                                                                         'matchrule' => 0,
-                                                                                                                                         'implicit' => undef,
-                                                                                                                                         'argcode' => undef,
-                                                                                                                                         'lookahead' => 0,
-                                                                                                                                         'line' => 128
-                                                                                                                                       }, 'Parse::RecDescent::Subrule' )
-                                                                                                                              ],
-                                                                                                                   'line' => undef
-                                                                                                                 }, 'Parse::RecDescent::Production' ),
-                                                                                                          bless( {
-                                                                                                                   'number' => '1',
-                                                                                                                   'strcount' => 0,
-                                                                                                                   'dircount' => 0,
-                                                                                                                   'uncommit' => undef,
-                                                                                                                   'error' => undef,
-                                                                                                                   'patcount' => 0,
-                                                                                                                   'actcount' => 0,
-                                                                                                                   'items' => [
-                                                                                                                                bless( {
-                                                                                                                                         'subrule' => 'description_def',
-                                                                                                                                         'matchrule' => 0,
-                                                                                                                                         'implicit' => undef,
-                                                                                                                                         'argcode' => undef,
-                                                                                                                                         'lookahead' => 0,
-                                                                                                                                         'line' => 128
-                                                                                                                                       }, 'Parse::RecDescent::Subrule' )
-                                                                                                                              ],
-                                                                                                                   'line' => 128
-                                                                                                                 }, 'Parse::RecDescent::Production' ),
-                                                                                                          bless( {
-                                                                                                                   'number' => '2',
-                                                                                                                   'strcount' => 0,
-                                                                                                                   'dircount' => 0,
-                                                                                                                   'uncommit' => undef,
-                                                                                                                   'error' => undef,
-                                                                                                                   'patcount' => 0,
-                                                                                                                   'actcount' => 0,
-                                                                                                                   'items' => [
-                                                                                                                                bless( {
-                                                                                                                                         'subrule' => 'line',
-                                                                                                                                         'matchrule' => 0,
-                                                                                                                                         'implicit' => undef,
-                                                                                                                                         'argcode' => undef,
-                                                                                                                                         'lookahead' => 0,
-                                                                                                                                         'line' => 128
-                                                                                                                                       }, 'Parse::RecDescent::Subrule' )
-                                                                                                                              ],
-                                                                                                                   'line' => 128
-                                                                                                                 }, 'Parse::RecDescent::Production' )
-                                                                                                        ],
-                                                                                             'name' => '_alternation_1_of_production_1_of_rule_form_spec',
-                                                                                             'vars' => '',
-                                                                                             'line' => 128
-                                                                                           }, 'Parse::RecDescent::Rule' ),
                               'line' => bless( {
                                                  'impcount' => 1,
                                                  'calls' => [
@@ -7585,23 +10669,23 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                              'hashname' => '__DIRECTIVE1__',
                                                                                              'name' => '<skip:\'[ \\t]*\'>',
                                                                                              'lookahead' => 0,
-                                                                                             'line' => 38,
+                                                                                             'line' => 70,
                                                                                              'code' => 'my $oldskip = $skip; $skip=\'[ \\t]*\'; $oldskip'
                                                                                            }, 'Parse::RecDescent::Directive' ),
                                                                                     bless( {
                                                                                              'subrule' => '_alternation_1_of_production_1_of_rule_line',
                                                                                              'matchrule' => 0,
-                                                                                             'implicit' => 'title, or author, or pattern_def, or heading, or unknown_directive, or field, or comment, or blank',
+                                                                                             'implicit' => 'title, or author, or pattern_def, or heading, or group_field, or unknown_directive, or field, or comment, or blank',
                                                                                              'argcode' => undef,
                                                                                              'lookahead' => 0,
-                                                                                             'line' => 38
+                                                                                             'line' => 70
                                                                                            }, 'Parse::RecDescent::Subrule' ),
                                                                                     bless( {
                                                                                              'pattern' => '\\n',
                                                                                              'hashname' => '__STRING1__',
                                                                                              'description' => '\'\\\\n\'',
                                                                                              'lookahead' => 0,
-                                                                                             'line' => 38
+                                                                                             'line' => 70
                                                                                            }, 'Parse::RecDescent::InterpLit' )
                                                                                   ],
                                                                        'line' => undef
@@ -7609,8 +10693,150 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                             ],
                                                  'name' => 'line',
                                                  'vars' => '',
-                                                 'line' => 38
+                                                 'line' => 70
                                                }, 'Parse::RecDescent::Rule' ),
+                              '_alternation_1_of_production_1_of_rule_form_spec' => bless( {
+                                                                                             'impcount' => 0,
+                                                                                             'calls' => [
+                                                                                                          'list_def',
+                                                                                                          'description_def',
+                                                                                                          'group_def',
+                                                                                                          'line'
+                                                                                                        ],
+                                                                                             'changed' => 0,
+                                                                                             'opcount' => 0,
+                                                                                             'prods' => [
+                                                                                                          bless( {
+                                                                                                                   'number' => '0',
+                                                                                                                   'strcount' => 0,
+                                                                                                                   'dircount' => 0,
+                                                                                                                   'uncommit' => undef,
+                                                                                                                   'error' => undef,
+                                                                                                                   'patcount' => 0,
+                                                                                                                   'actcount' => 0,
+                                                                                                                   'items' => [
+                                                                                                                                bless( {
+                                                                                                                                         'subrule' => 'list_def',
+                                                                                                                                         'matchrule' => 0,
+                                                                                                                                         'implicit' => undef,
+                                                                                                                                         'argcode' => undef,
+                                                                                                                                         'lookahead' => 0,
+                                                                                                                                         'line' => 192
+                                                                                                                                       }, 'Parse::RecDescent::Subrule' )
+                                                                                                                              ],
+                                                                                                                   'line' => undef
+                                                                                                                 }, 'Parse::RecDescent::Production' ),
+                                                                                                          bless( {
+                                                                                                                   'number' => '1',
+                                                                                                                   'strcount' => 0,
+                                                                                                                   'dircount' => 0,
+                                                                                                                   'uncommit' => undef,
+                                                                                                                   'error' => undef,
+                                                                                                                   'patcount' => 0,
+                                                                                                                   'actcount' => 0,
+                                                                                                                   'items' => [
+                                                                                                                                bless( {
+                                                                                                                                         'subrule' => 'description_def',
+                                                                                                                                         'matchrule' => 0,
+                                                                                                                                         'implicit' => undef,
+                                                                                                                                         'argcode' => undef,
+                                                                                                                                         'lookahead' => 0,
+                                                                                                                                         'line' => 192
+                                                                                                                                       }, 'Parse::RecDescent::Subrule' )
+                                                                                                                              ],
+                                                                                                                   'line' => 192
+                                                                                                                 }, 'Parse::RecDescent::Production' ),
+                                                                                                          bless( {
+                                                                                                                   'number' => '2',
+                                                                                                                   'strcount' => 0,
+                                                                                                                   'dircount' => 0,
+                                                                                                                   'uncommit' => undef,
+                                                                                                                   'error' => undef,
+                                                                                                                   'patcount' => 0,
+                                                                                                                   'actcount' => 0,
+                                                                                                                   'items' => [
+                                                                                                                                bless( {
+                                                                                                                                         'subrule' => 'group_def',
+                                                                                                                                         'matchrule' => 0,
+                                                                                                                                         'implicit' => undef,
+                                                                                                                                         'argcode' => undef,
+                                                                                                                                         'lookahead' => 0,
+                                                                                                                                         'line' => 192
+                                                                                                                                       }, 'Parse::RecDescent::Subrule' )
+                                                                                                                              ],
+                                                                                                                   'line' => 192
+                                                                                                                 }, 'Parse::RecDescent::Production' ),
+                                                                                                          bless( {
+                                                                                                                   'number' => '3',
+                                                                                                                   'strcount' => 0,
+                                                                                                                   'dircount' => 0,
+                                                                                                                   'uncommit' => undef,
+                                                                                                                   'error' => undef,
+                                                                                                                   'patcount' => 0,
+                                                                                                                   'actcount' => 0,
+                                                                                                                   'items' => [
+                                                                                                                                bless( {
+                                                                                                                                         'subrule' => 'line',
+                                                                                                                                         'matchrule' => 0,
+                                                                                                                                         'implicit' => undef,
+                                                                                                                                         'argcode' => undef,
+                                                                                                                                         'lookahead' => 0,
+                                                                                                                                         'line' => 192
+                                                                                                                                       }, 'Parse::RecDescent::Subrule' )
+                                                                                                                              ],
+                                                                                                                   'line' => 192
+                                                                                                                 }, 'Parse::RecDescent::Production' )
+                                                                                                        ],
+                                                                                             'name' => '_alternation_1_of_production_1_of_rule_form_spec',
+                                                                                             'vars' => '',
+                                                                                             'line' => 192
+                                                                                           }, 'Parse::RecDescent::Rule' ),
+                              'optional_pattern' => bless( {
+                                                             'impcount' => 0,
+                                                             'calls' => [],
+                                                             'changed' => 0,
+                                                             'opcount' => 0,
+                                                             'prods' => [
+                                                                          bless( {
+                                                                                   'number' => '0',
+                                                                                   'strcount' => 1,
+                                                                                   'dircount' => 0,
+                                                                                   'uncommit' => undef,
+                                                                                   'error' => undef,
+                                                                                   'patcount' => 1,
+                                                                                   'actcount' => 1,
+                                                                                   'items' => [
+                                                                                                bless( {
+                                                                                                         'pattern' => '[A-Z_]+',
+                                                                                                         'hashname' => '__PATTERN1__',
+                                                                                                         'description' => '/[A-Z_]+/',
+                                                                                                         'lookahead' => 0,
+                                                                                                         'rdelim' => '/',
+                                                                                                         'line' => 180,
+                                                                                                         'mod' => '',
+                                                                                                         'ldelim' => '/'
+                                                                                                       }, 'Parse::RecDescent::Token' ),
+                                                                                                bless( {
+                                                                                                         'pattern' => '?',
+                                                                                                         'hashname' => '__STRING1__',
+                                                                                                         'description' => '\'?\'',
+                                                                                                         'lookahead' => 0,
+                                                                                                         'line' => 180
+                                                                                                       }, 'Parse::RecDescent::Literal' ),
+                                                                                                bless( {
+                                                                                                         'hashname' => '__ACTION1__',
+                                                                                                         'lookahead' => 0,
+                                                                                                         'line' => 180,
+                                                                                                         'code' => '{ $required = 0; $item[1] }'
+                                                                                                       }, 'Parse::RecDescent::Action' )
+                                                                                              ],
+                                                                                   'line' => undef
+                                                                                 }, 'Parse::RecDescent::Production' )
+                                                                        ],
+                                                             'name' => 'optional_pattern',
+                                                             'vars' => '',
+                                                             'line' => 180
+                                                           }, 'Parse::RecDescent::Rule' ),
                               'option_list' => bless( {
                                                         'impcount' => 0,
                                                         'calls' => [
@@ -7635,7 +10861,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                     'implicit' => undef,
                                                                                                     'argcode' => undef,
                                                                                                     'lookahead' => 0,
-                                                                                                    'line' => 105
+                                                                                                    'line' => 165
                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                          ],
                                                                               'line' => undef
@@ -7655,15 +10881,15 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                     'implicit' => undef,
                                                                                                     'argcode' => undef,
                                                                                                     'lookahead' => 0,
-                                                                                                    'line' => 105
+                                                                                                    'line' => 165
                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                          ],
-                                                                              'line' => 105
+                                                                              'line' => 165
                                                                             }, 'Parse::RecDescent::Production' )
                                                                    ],
                                                         'name' => 'option_list',
                                                         'vars' => '',
-                                                        'line' => 105
+                                                        'line' => 165
                                                       }, 'Parse::RecDescent::Rule' ),
                               'value' => bless( {
                                                   'impcount' => 0,
@@ -7688,7 +10914,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'implicit' => undef,
                                                                                               'argcode' => undef,
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 114
+                                                                                              'line' => 174
                                                                                             }, 'Parse::RecDescent::Subrule' )
                                                                                    ],
                                                                         'line' => undef
@@ -7696,7 +10922,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                              ],
                                                   'name' => 'value',
                                                   'vars' => '',
-                                                  'line' => 114
+                                                  'line' => 174
                                                 }, 'Parse::RecDescent::Rule' ),
                               'name' => bless( {
                                                  'impcount' => 0,
@@ -7721,7 +10947,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                              'implicit' => undef,
                                                                                              'argcode' => undef,
                                                                                              'lookahead' => 0,
-                                                                                             'line' => 85
+                                                                                             'line' => 137
                                                                                            }, 'Parse::RecDescent::Subrule' )
                                                                                   ],
                                                                        'line' => undef
@@ -7729,11 +10955,13 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                             ],
                                                  'name' => 'name',
                                                  'vars' => '',
-                                                 'line' => 85
+                                                 'line' => 137
                                                }, 'Parse::RecDescent::Rule' ),
                               'default' => bless( {
-                                                    'impcount' => 0,
-                                                    'calls' => [],
+                                                    'impcount' => 1,
+                                                    'calls' => [
+                                                                 '_alternation_1_of_production_1_of_rule_default'
+                                                               ],
                                                     'changed' => 0,
                                                     'opcount' => 0,
                                                     'prods' => [
@@ -7743,34 +10971,159 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                           'dircount' => 0,
                                                                           'uncommit' => undef,
                                                                           'error' => undef,
-                                                                          'patcount' => 1,
-                                                                          'actcount' => 0,
+                                                                          'patcount' => 0,
+                                                                          'actcount' => 1,
                                                                           'items' => [
                                                                                        bless( {
                                                                                                 'pattern' => '=',
                                                                                                 'hashname' => '__STRING1__',
                                                                                                 'description' => '\'=\'',
                                                                                                 'lookahead' => 0,
-                                                                                                'line' => 103
+                                                                                                'line' => 155
                                                                                               }, 'Parse::RecDescent::Literal' ),
                                                                                        bless( {
-                                                                                                'pattern' => '[^\\@\\{\\s]+',
-                                                                                                'hashname' => '__PATTERN1__',
-                                                                                                'description' => '/[^\\\\@\\\\\\{\\\\s]+/',
+                                                                                                'subrule' => '_alternation_1_of_production_1_of_rule_default',
+                                                                                                'matchrule' => 0,
+                                                                                                'implicit' => 'simple_multiword, or quoted_string',
+                                                                                                'argcode' => undef,
                                                                                                 'lookahead' => 0,
-                                                                                                'rdelim' => '/',
-                                                                                                'line' => 103,
-                                                                                                'mod' => '',
-                                                                                                'ldelim' => '/'
-                                                                                              }, 'Parse::RecDescent::Token' )
+                                                                                                'line' => 155
+                                                                                              }, 'Parse::RecDescent::Subrule' ),
+                                                                                       bless( {
+                                                                                                'hashname' => '__ACTION1__',
+                                                                                                'lookahead' => 0,
+                                                                                                'line' => 155,
+                                                                                                'code' => '{ $item[2] }'
+                                                                                              }, 'Parse::RecDescent::Action' )
                                                                                      ],
                                                                           'line' => undef
                                                                         }, 'Parse::RecDescent::Production' )
                                                                ],
                                                     'name' => 'default',
                                                     'vars' => '',
-                                                    'line' => 103
+                                                    'line' => 155
                                                   }, 'Parse::RecDescent::Rule' ),
+                              '_alternation_1_of_production_1_of_rule_field_line' => bless( {
+                                                                                              'impcount' => 0,
+                                                                                              'calls' => [
+                                                                                                           'field',
+                                                                                                           'comment',
+                                                                                                           'blank'
+                                                                                                         ],
+                                                                                              'changed' => 0,
+                                                                                              'opcount' => 0,
+                                                                                              'prods' => [
+                                                                                                           bless( {
+                                                                                                                    'number' => '0',
+                                                                                                                    'strcount' => 0,
+                                                                                                                    'dircount' => 0,
+                                                                                                                    'uncommit' => undef,
+                                                                                                                    'error' => undef,
+                                                                                                                    'patcount' => 0,
+                                                                                                                    'actcount' => 0,
+                                                                                                                    'items' => [
+                                                                                                                                 bless( {
+                                                                                                                                          'subrule' => 'field',
+                                                                                                                                          'matchrule' => 0,
+                                                                                                                                          'implicit' => undef,
+                                                                                                                                          'argcode' => undef,
+                                                                                                                                          'lookahead' => 0,
+                                                                                                                                          'line' => 192
+                                                                                                                                        }, 'Parse::RecDescent::Subrule' )
+                                                                                                                               ],
+                                                                                                                    'line' => undef
+                                                                                                                  }, 'Parse::RecDescent::Production' ),
+                                                                                                           bless( {
+                                                                                                                    'number' => '1',
+                                                                                                                    'strcount' => 0,
+                                                                                                                    'dircount' => 0,
+                                                                                                                    'uncommit' => undef,
+                                                                                                                    'error' => undef,
+                                                                                                                    'patcount' => 0,
+                                                                                                                    'actcount' => 0,
+                                                                                                                    'items' => [
+                                                                                                                                 bless( {
+                                                                                                                                          'subrule' => 'comment',
+                                                                                                                                          'matchrule' => 0,
+                                                                                                                                          'implicit' => undef,
+                                                                                                                                          'argcode' => undef,
+                                                                                                                                          'lookahead' => 0,
+                                                                                                                                          'line' => 192
+                                                                                                                                        }, 'Parse::RecDescent::Subrule' )
+                                                                                                                               ],
+                                                                                                                    'line' => 192
+                                                                                                                  }, 'Parse::RecDescent::Production' ),
+                                                                                                           bless( {
+                                                                                                                    'number' => '2',
+                                                                                                                    'strcount' => 0,
+                                                                                                                    'dircount' => 0,
+                                                                                                                    'uncommit' => undef,
+                                                                                                                    'error' => undef,
+                                                                                                                    'patcount' => 0,
+                                                                                                                    'actcount' => 0,
+                                                                                                                    'items' => [
+                                                                                                                                 bless( {
+                                                                                                                                          'subrule' => 'blank',
+                                                                                                                                          'matchrule' => 0,
+                                                                                                                                          'implicit' => undef,
+                                                                                                                                          'argcode' => undef,
+                                                                                                                                          'lookahead' => 0,
+                                                                                                                                          'line' => 192
+                                                                                                                                        }, 'Parse::RecDescent::Subrule' )
+                                                                                                                               ],
+                                                                                                                    'line' => 192
+                                                                                                                  }, 'Parse::RecDescent::Production' )
+                                                                                                         ],
+                                                                                              'name' => '_alternation_1_of_production_1_of_rule_field_line',
+                                                                                              'vars' => '',
+                                                                                              'line' => 192
+                                                                                            }, 'Parse::RecDescent::Rule' ),
+                              'simple_multiword' => bless( {
+                                                             'impcount' => 0,
+                                                             'calls' => [],
+                                                             'changed' => 0,
+                                                             'opcount' => 0,
+                                                             'prods' => [
+                                                                          bless( {
+                                                                                   'number' => '0',
+                                                                                   'strcount' => 0,
+                                                                                   'dircount' => 1,
+                                                                                   'uncommit' => undef,
+                                                                                   'error' => undef,
+                                                                                   'patcount' => 1,
+                                                                                   'actcount' => 1,
+                                                                                   'items' => [
+                                                                                                bless( {
+                                                                                                         'hashname' => '__DIRECTIVE1__',
+                                                                                                         'name' => '<skip:\'\'>',
+                                                                                                         'lookahead' => 0,
+                                                                                                         'line' => 158,
+                                                                                                         'code' => 'my $oldskip = $skip; $skip=\'\'; $oldskip'
+                                                                                                       }, 'Parse::RecDescent::Directive' ),
+                                                                                                bless( {
+                                                                                                         'pattern' => '[\\w\\t ]+',
+                                                                                                         'hashname' => '__PATTERN1__',
+                                                                                                         'description' => '/[\\\\w\\\\t ]+/',
+                                                                                                         'lookahead' => 0,
+                                                                                                         'rdelim' => '/',
+                                                                                                         'line' => 158,
+                                                                                                         'mod' => '',
+                                                                                                         'ldelim' => '/'
+                                                                                                       }, 'Parse::RecDescent::Token' ),
+                                                                                                bless( {
+                                                                                                         'hashname' => '__ACTION1__',
+                                                                                                         'lookahead' => 0,
+                                                                                                         'line' => 158,
+                                                                                                         'code' => '{ $item[2] }'
+                                                                                                       }, 'Parse::RecDescent::Action' )
+                                                                                              ],
+                                                                                   'line' => undef
+                                                                                 }, 'Parse::RecDescent::Production' )
+                                                                        ],
+                                                             'name' => 'simple_multiword',
+                                                             'vars' => '',
+                                                             'line' => 157
+                                                           }, 'Parse::RecDescent::Rule' ),
                               'form_spec' => bless( {
                                                       'impcount' => 1,
                                                       'calls' => [
@@ -7790,28 +11143,30 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                             'items' => [
                                                                                          bless( {
                                                                                                   'subrule' => '_alternation_1_of_production_1_of_rule_form_spec',
-                                                                                                  'expected' => 'list_def, or description_def, or line',
+                                                                                                  'expected' => 'list_def, or description_def, or group_def, or line',
                                                                                                   'min' => 1,
                                                                                                   'argcode' => undef,
                                                                                                   'max' => 100000000,
                                                                                                   'matchrule' => 0,
                                                                                                   'repspec' => 's',
                                                                                                   'lookahead' => 0,
-                                                                                                  'line' => 3
+                                                                                                  'line' => 25
                                                                                                 }, 'Parse::RecDescent::Repetition' ),
                                                                                          bless( {
                                                                                                   'hashname' => '__ACTION1__',
                                                                                                   'lookahead' => 0,
-                                                                                                  'line' => 4,
+                                                                                                  'line' => 26,
                                                                                                   'code' => '{
 	$return = {
 	    title    => $title,
 	    author   => $author,
 	    description => $description,
-	    lists    => \\%lists, 
-	    patterns => \\%patterns, 
-	    headings => \\@headings,
-	    fields   => \\@fields,
+	    lists    => \\%lists    || {}, 
+	    patterns => \\%patterns || {}, 
+	    headings => \\@headings || [],
+	    fields   => \\@fields   || [],
+	    lines    => \\@lines    || [],
+	    groups   => \\%groups   || {},
 	}
     }'
                                                                                                 }, 'Parse::RecDescent::Action' )
@@ -7821,7 +11176,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                  ],
                                                       'name' => 'form_spec',
                                                       'vars' => '',
-                                                      'line' => 3
+                                                      'line' => 25
                                                     }, 'Parse::RecDescent::Rule' ),
                               'hint' => bless( {
                                                  'impcount' => 0,
@@ -7843,7 +11198,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                              'hashname' => '__STRING1__',
                                                                                              'description' => '\'[\'',
                                                                                              'lookahead' => 0,
-                                                                                             'line' => 99
+                                                                                             'line' => 151
                                                                                            }, 'Parse::RecDescent::Literal' ),
                                                                                     bless( {
                                                                                              'pattern' => '[^\\]]+',
@@ -7851,7 +11206,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                              'description' => '/[^\\\\]]+/',
                                                                                              'lookahead' => 0,
                                                                                              'rdelim' => '/',
-                                                                                             'line' => 99,
+                                                                                             'line' => 151,
                                                                                              'mod' => '',
                                                                                              'ldelim' => '/'
                                                                                            }, 'Parse::RecDescent::Token' ),
@@ -7860,12 +11215,12 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                              'hashname' => '__STRING2__',
                                                                                              'description' => '\']\'',
                                                                                              'lookahead' => 0,
-                                                                                             'line' => 99
+                                                                                             'line' => 151
                                                                                            }, 'Parse::RecDescent::Literal' ),
                                                                                     bless( {
                                                                                              'hashname' => '__ACTION1__',
                                                                                              'lookahead' => 0,
-                                                                                             'line' => 99,
+                                                                                             'line' => 151,
                                                                                              'code' => '{ $item[2] }'
                                                                                            }, 'Parse::RecDescent::Action' )
                                                                                   ],
@@ -7874,7 +11229,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                             ],
                                                  'name' => 'hint',
                                                  'vars' => '',
-                                                 'line' => 99
+                                                 'line' => 151
                                                }, 'Parse::RecDescent::Rule' ),
                               'type' => bless( {
                                                  'impcount' => 0,
@@ -7896,7 +11251,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                              'hashname' => '__STRING1__',
                                                                                              'description' => '\':\'',
                                                                                              'lookahead' => 0,
-                                                                                             'line' => 101
+                                                                                             'line' => 153
                                                                                            }, 'Parse::RecDescent::Literal' ),
                                                                                     bless( {
                                                                                              'pattern' => 'textarea|text|password|file|checkbox|radio|select|hidden|static',
@@ -7904,7 +11259,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                              'description' => '/textarea|text|password|file|checkbox|radio|select|hidden|static/',
                                                                                              'lookahead' => 0,
                                                                                              'rdelim' => '/',
-                                                                                             'line' => 101,
+                                                                                             'line' => 153,
                                                                                              'mod' => '',
                                                                                              'ldelim' => '/'
                                                                                            }, 'Parse::RecDescent::Token' )
@@ -7914,11 +11269,13 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                             ],
                                                  'name' => 'type',
                                                  'vars' => '',
-                                                 'line' => 101
+                                                 'line' => 153
                                                }, 'Parse::RecDescent::Rule' ),
                               'label' => bless( {
-                                                  'impcount' => 0,
-                                                  'calls' => [],
+                                                  'impcount' => 1,
+                                                  'calls' => [
+                                                               '_alternation_1_of_production_1_of_rule_label'
+                                                             ],
                                                   'changed' => 0,
                                                   'opcount' => 0,
                                                   'prods' => [
@@ -7928,33 +11285,37 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                         'dircount' => 0,
                                                                         'uncommit' => undef,
                                                                         'error' => undef,
-                                                                        'patcount' => 1,
-                                                                        'actcount' => 0,
+                                                                        'patcount' => 0,
+                                                                        'actcount' => 1,
                                                                         'items' => [
                                                                                      bless( {
                                                                                               'pattern' => '|',
                                                                                               'hashname' => '__STRING1__',
                                                                                               'description' => '\'|\'',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 97
+                                                                                              'line' => 149
                                                                                             }, 'Parse::RecDescent::Literal' ),
                                                                                      bless( {
-                                                                                              'pattern' => '[^:\\[\\{\\/]+',
-                                                                                              'hashname' => '__PATTERN1__',
-                                                                                              'description' => '/[^:\\\\[\\\\\\{\\\\/]+/i',
+                                                                                              'subrule' => '_alternation_1_of_production_1_of_rule_label',
+                                                                                              'matchrule' => 0,
+                                                                                              'implicit' => 'simple_multiword, or quoted_string',
+                                                                                              'argcode' => undef,
                                                                                               'lookahead' => 0,
-                                                                                              'rdelim' => '/',
-                                                                                              'line' => 97,
-                                                                                              'mod' => 'i',
-                                                                                              'ldelim' => '/'
-                                                                                            }, 'Parse::RecDescent::Token' )
+                                                                                              'line' => 149
+                                                                                            }, 'Parse::RecDescent::Subrule' ),
+                                                                                     bless( {
+                                                                                              'hashname' => '__ACTION1__',
+                                                                                              'lookahead' => 0,
+                                                                                              'line' => 149,
+                                                                                              'code' => '{ $item[2] }'
+                                                                                            }, 'Parse::RecDescent::Action' )
                                                                                    ],
                                                                         'line' => undef
                                                                       }, 'Parse::RecDescent::Production' )
                                                              ],
                                                   'name' => 'label',
                                                   'vars' => '',
-                                                  'line' => 97
+                                                  'line' => 149
                                                 }, 'Parse::RecDescent::Rule' ),
                               'title' => bless( {
                                                   'impcount' => 0,
@@ -7976,7 +11337,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'hashname' => '__STRING1__',
                                                                                               'description' => '\'!title\'',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 40
+                                                                                              'line' => 72
                                                                                             }, 'Parse::RecDescent::Literal' ),
                                                                                      bless( {
                                                                                               'pattern' => '.*',
@@ -7984,14 +11345,14 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                               'description' => '/.*/',
                                                                                               'lookahead' => 0,
                                                                                               'rdelim' => '/',
-                                                                                              'line' => 40,
+                                                                                              'line' => 72,
                                                                                               'mod' => '',
                                                                                               'ldelim' => '/'
                                                                                             }, 'Parse::RecDescent::Token' ),
                                                                                      bless( {
                                                                                               'hashname' => '__ACTION1__',
                                                                                               'lookahead' => 0,
-                                                                                              'line' => 41,
+                                                                                              'line' => 73,
                                                                                               'code' => '{ warn "[Text::Formbuilder] Title redefined at input text line $thisline\\n" if defined $title;
     $title = $item[2] }'
                                                                                             }, 'Parse::RecDescent::Action' )
@@ -8001,7 +11362,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                              ],
                                                   'name' => 'title',
                                                   'vars' => '',
-                                                  'line' => 40
+                                                  'line' => 72
                                                 }, 'Parse::RecDescent::Rule' ),
                               'pattern_def' => bless( {
                                                         'impcount' => 0,
@@ -8026,7 +11387,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                     'hashname' => '__STRING1__',
                                                                                                     'description' => '\'!pattern\'',
                                                                                                     'lookahead' => 0,
-                                                                                                    'line' => 47
+                                                                                                    'line' => 79
                                                                                                   }, 'Parse::RecDescent::Literal' ),
                                                                                            bless( {
                                                                                                     'subrule' => 'var_name',
@@ -8034,7 +11395,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                     'implicit' => undef,
                                                                                                     'argcode' => undef,
                                                                                                     'lookahead' => 0,
-                                                                                                    'line' => 47
+                                                                                                    'line' => 79
                                                                                                   }, 'Parse::RecDescent::Subrule' ),
                                                                                            bless( {
                                                                                                     'subrule' => 'pattern',
@@ -8042,12 +11403,12 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                     'implicit' => undef,
                                                                                                     'argcode' => undef,
                                                                                                     'lookahead' => 0,
-                                                                                                    'line' => 47
+                                                                                                    'line' => 79
                                                                                                   }, 'Parse::RecDescent::Subrule' ),
                                                                                            bless( {
                                                                                                     'hashname' => '__ACTION1__',
                                                                                                     'lookahead' => 0,
-                                                                                                    'line' => 48,
+                                                                                                    'line' => 80,
                                                                                                     'code' => '{ $patterns{$item{var_name}} = $item{pattern} }'
                                                                                                   }, 'Parse::RecDescent::Action' )
                                                                                          ],
@@ -8056,7 +11417,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                    ],
                                                         'name' => 'pattern_def',
                                                         'vars' => '',
-                                                        'line' => 47
+                                                        'line' => 79
                                                       }, 'Parse::RecDescent::Rule' ),
                               'dynamic_list' => bless( {
                                                          'impcount' => 0,
@@ -8078,20 +11439,20 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                      'hashname' => '__STRING1__',
                                                                                                      'description' => '\'&\'',
                                                                                                      'lookahead' => 0,
-                                                                                                     'line' => 21
+                                                                                                     'line' => 45
                                                                                                    }, 'Parse::RecDescent::Literal' ),
                                                                                             bless( {
                                                                                                      'hashname' => '__DIRECTIVE1__',
                                                                                                      'name' => '<perl_codeblock>',
                                                                                                      'lookahead' => 0,
-                                                                                                     'line' => 21,
+                                                                                                     'line' => 45,
                                                                                                      'code' => 'Text::Balanced::extract_codeblock($text,undef,$skip,\'{}\');
 					'
                                                                                                    }, 'Parse::RecDescent::Directive' ),
                                                                                             bless( {
                                                                                                      'hashname' => '__ACTION1__',
                                                                                                      'lookahead' => 0,
-                                                                                                     'line' => 22,
+                                                                                                     'line' => 46,
                                                                                                      'code' => '{
 	my @results = (eval $item[2]);
 	if (ref $results[0] eq \'HASH\') {
@@ -8107,111 +11468,8 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                     ],
                                                          'name' => 'dynamic_list',
                                                          'vars' => '',
-                                                         'line' => 21
+                                                         'line' => 45
                                                        }, 'Parse::RecDescent::Rule' ),
-                              'list_def' => bless( {
-                                                     'impcount' => 1,
-                                                     'calls' => [
-                                                                  'var_name',
-                                                                  '_alternation_1_of_production_1_of_rule_list_def'
-                                                                ],
-                                                     'changed' => 0,
-                                                     'opcount' => 0,
-                                                     'prods' => [
-                                                                  bless( {
-                                                                           'number' => '0',
-                                                                           'strcount' => 1,
-                                                                           'dircount' => 0,
-                                                                           'uncommit' => undef,
-                                                                           'error' => undef,
-                                                                           'patcount' => 0,
-                                                                           'actcount' => 1,
-                                                                           'items' => [
-                                                                                        bless( {
-                                                                                                 'pattern' => '!list',
-                                                                                                 'hashname' => '__STRING1__',
-                                                                                                 'description' => '\'!list\'',
-                                                                                                 'lookahead' => 0,
-                                                                                                 'line' => 16
-                                                                                               }, 'Parse::RecDescent::Literal' ),
-                                                                                        bless( {
-                                                                                                 'subrule' => 'var_name',
-                                                                                                 'matchrule' => 0,
-                                                                                                 'implicit' => undef,
-                                                                                                 'argcode' => undef,
-                                                                                                 'lookahead' => 0,
-                                                                                                 'line' => 16
-                                                                                               }, 'Parse::RecDescent::Subrule' ),
-                                                                                        bless( {
-                                                                                                 'subrule' => '_alternation_1_of_production_1_of_rule_list_def',
-                                                                                                 'matchrule' => 0,
-                                                                                                 'implicit' => 'static_list, or dynamic_list',
-                                                                                                 'argcode' => undef,
-                                                                                                 'lookahead' => 0,
-                                                                                                 'line' => 16
-                                                                                               }, 'Parse::RecDescent::Subrule' ),
-                                                                                        bless( {
-                                                                                                 'hashname' => '__ACTION1__',
-                                                                                                 'lookahead' => 0,
-                                                                                                 'line' => 17,
-                                                                                                 'code' => '{ $lists{$item{var_name}} = [ @options ]; @options = () }'
-                                                                                               }, 'Parse::RecDescent::Action' )
-                                                                                      ],
-                                                                           'line' => undef
-                                                                         }, 'Parse::RecDescent::Production' )
-                                                                ],
-                                                     'name' => 'list_def',
-                                                     'vars' => '',
-                                                     'line' => 16
-                                                   }, 'Parse::RecDescent::Rule' ),
-                              'description_def' => bless( {
-                                                            'impcount' => 0,
-                                                            'calls' => [],
-                                                            'changed' => 0,
-                                                            'opcount' => 0,
-                                                            'prods' => [
-                                                                         bless( {
-                                                                                  'number' => '0',
-                                                                                  'strcount' => 1,
-                                                                                  'dircount' => 1,
-                                                                                  'uncommit' => undef,
-                                                                                  'error' => undef,
-                                                                                  'patcount' => 0,
-                                                                                  'actcount' => 1,
-                                                                                  'items' => [
-                                                                                               bless( {
-                                                                                                        'pattern' => '!description',
-                                                                                                        'hashname' => '__STRING1__',
-                                                                                                        'description' => '\'!description\'',
-                                                                                                        'lookahead' => 0,
-                                                                                                        'line' => 31
-                                                                                                      }, 'Parse::RecDescent::Literal' ),
-                                                                                               bless( {
-                                                                                                        'hashname' => '__DIRECTIVE1__',
-                                                                                                        'name' => '<perl_codeblock>',
-                                                                                                        'lookahead' => 0,
-                                                                                                        'line' => 31,
-                                                                                                        'code' => 'Text::Balanced::extract_codeblock($text,undef,$skip,\'{}\');
-					'
-                                                                                                      }, 'Parse::RecDescent::Directive' ),
-                                                                                               bless( {
-                                                                                                        'hashname' => '__ACTION1__',
-                                                                                                        'lookahead' => 0,
-                                                                                                        'line' => 32,
-                                                                                                        'code' => '{ warn "[Text::FormBuilder] Description redefined at input text line $thisline\\n" if defined $description;
-    
-    $description = $item[2];
-    $description =~ s/^{\\s*|\\s*}$//g;
-    }'
-                                                                                                      }, 'Parse::RecDescent::Action' )
-                                                                                             ],
-                                                                                  'line' => undef
-                                                                                }, 'Parse::RecDescent::Production' )
-                                                                       ],
-                                                            'name' => 'description_def',
-                                                            'vars' => '',
-                                                            'line' => 31
-                                                          }, 'Parse::RecDescent::Rule' ),
                               'options' => bless( {
                                                     'impcount' => 0,
                                                     'calls' => [
@@ -8235,7 +11493,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'hashname' => '__STRING1__',
                                                                                                 'description' => '\'\\{\'',
                                                                                                 'lookahead' => 0,
-                                                                                                'line' => 107
+                                                                                                'line' => 167
                                                                                               }, 'Parse::RecDescent::Literal' ),
                                                                                        bless( {
                                                                                                 'expected' => '<leftop: option /,\\\\s*/ option>',
@@ -8248,7 +11506,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                       'implicit' => undef,
                                                                                                                       'argcode' => undef,
                                                                                                                       'lookahead' => 0,
-                                                                                                                      'line' => 107
+                                                                                                                      'line' => 167
                                                                                                                     }, 'Parse::RecDescent::Subrule' ),
                                                                                                 'rightarg' => bless( {
                                                                                                                        'subrule' => 'option',
@@ -8256,7 +11514,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                        'implicit' => undef,
                                                                                                                        'argcode' => undef,
                                                                                                                        'lookahead' => 0,
-                                                                                                                       'line' => 107
+                                                                                                                       'line' => 167
                                                                                                                      }, 'Parse::RecDescent::Subrule' ),
                                                                                                 'hashname' => '__DIRECTIVE1__',
                                                                                                 'type' => 'leftop',
@@ -8266,7 +11524,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                  'description' => '/,\\\\s*/',
                                                                                                                  'lookahead' => 0,
                                                                                                                  'rdelim' => '/',
-                                                                                                                 'line' => 107,
+                                                                                                                 'line' => 167,
                                                                                                                  'mod' => '',
                                                                                                                  'ldelim' => '/'
                                                                                                                }, 'Parse::RecDescent::Token' )
@@ -8276,7 +11534,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'hashname' => '__STRING2__',
                                                                                                 'description' => '\'\\}\'',
                                                                                                 'lookahead' => 0,
-                                                                                                'line' => 107
+                                                                                                'line' => 167
                                                                                               }, 'Parse::RecDescent::Literal' )
                                                                                      ],
                                                                           'line' => undef
@@ -8284,8 +11542,158 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                ],
                                                     'name' => 'options',
                                                     'vars' => '',
-                                                    'line' => 107
+                                                    'line' => 167
                                                   }, 'Parse::RecDescent::Rule' ),
+                              'list_def' => bless( {
+                                                     'impcount' => 1,
+                                                     'calls' => [
+                                                                  'var_name',
+                                                                  '_alternation_1_of_production_1_of_rule_list_def'
+                                                                ],
+                                                     'changed' => 0,
+                                                     'opcount' => 0,
+                                                     'prods' => [
+                                                                  bless( {
+                                                                           'number' => '0',
+                                                                           'strcount' => 1,
+                                                                           'dircount' => 0,
+                                                                           'uncommit' => undef,
+                                                                           'error' => undef,
+                                                                           'patcount' => 0,
+                                                                           'actcount' => 1,
+                                                                           'items' => [
+                                                                                        bless( {
+                                                                                                 'pattern' => '!list',
+                                                                                                 'hashname' => '__STRING1__',
+                                                                                                 'description' => '\'!list\'',
+                                                                                                 'lookahead' => 0,
+                                                                                                 'line' => 40
+                                                                                               }, 'Parse::RecDescent::Literal' ),
+                                                                                        bless( {
+                                                                                                 'subrule' => 'var_name',
+                                                                                                 'matchrule' => 0,
+                                                                                                 'implicit' => undef,
+                                                                                                 'argcode' => undef,
+                                                                                                 'lookahead' => 0,
+                                                                                                 'line' => 40
+                                                                                               }, 'Parse::RecDescent::Subrule' ),
+                                                                                        bless( {
+                                                                                                 'subrule' => '_alternation_1_of_production_1_of_rule_list_def',
+                                                                                                 'matchrule' => 0,
+                                                                                                 'implicit' => 'static_list, or dynamic_list',
+                                                                                                 'argcode' => undef,
+                                                                                                 'lookahead' => 0,
+                                                                                                 'line' => 40
+                                                                                               }, 'Parse::RecDescent::Subrule' ),
+                                                                                        bless( {
+                                                                                                 'hashname' => '__ACTION1__',
+                                                                                                 'lookahead' => 0,
+                                                                                                 'line' => 41,
+                                                                                                 'code' => '{ $lists{$item{var_name}} = [ @options ]; @options = () }'
+                                                                                               }, 'Parse::RecDescent::Action' )
+                                                                                      ],
+                                                                           'line' => undef
+                                                                         }, 'Parse::RecDescent::Production' )
+                                                                ],
+                                                     'name' => 'list_def',
+                                                     'vars' => '',
+                                                     'line' => 40
+                                                   }, 'Parse::RecDescent::Rule' ),
+                              'description_def' => bless( {
+                                                            'impcount' => 0,
+                                                            'calls' => [],
+                                                            'changed' => 0,
+                                                            'opcount' => 0,
+                                                            'prods' => [
+                                                                         bless( {
+                                                                                  'number' => '0',
+                                                                                  'strcount' => 1,
+                                                                                  'dircount' => 1,
+                                                                                  'uncommit' => undef,
+                                                                                  'error' => undef,
+                                                                                  'patcount' => 0,
+                                                                                  'actcount' => 1,
+                                                                                  'items' => [
+                                                                                               bless( {
+                                                                                                        'pattern' => '!description',
+                                                                                                        'hashname' => '__STRING1__',
+                                                                                                        'description' => '\'!description\'',
+                                                                                                        'lookahead' => 0,
+                                                                                                        'line' => 55
+                                                                                                      }, 'Parse::RecDescent::Literal' ),
+                                                                                               bless( {
+                                                                                                        'hashname' => '__DIRECTIVE1__',
+                                                                                                        'name' => '<perl_codeblock>',
+                                                                                                        'lookahead' => 0,
+                                                                                                        'line' => 55,
+                                                                                                        'code' => 'Text::Balanced::extract_codeblock($text,undef,$skip,\'{}\');
+					'
+                                                                                                      }, 'Parse::RecDescent::Directive' ),
+                                                                                               bless( {
+                                                                                                        'hashname' => '__ACTION1__',
+                                                                                                        'lookahead' => 0,
+                                                                                                        'line' => 56,
+                                                                                                        'code' => '{ warn "[Text::FormBuilder] Description redefined at input text line $thisline\\n" if defined $description;
+    
+    $description = $item[2];
+    $description =~ s/^{\\s*|\\s*}$//g;
+    }'
+                                                                                                      }, 'Parse::RecDescent::Action' )
+                                                                                             ],
+                                                                                  'line' => undef
+                                                                                }, 'Parse::RecDescent::Production' )
+                                                                       ],
+                                                            'name' => 'description_def',
+                                                            'vars' => '',
+                                                            'line' => 55
+                                                          }, 'Parse::RecDescent::Rule' ),
+                              'field_line' => bless( {
+                                                       'impcount' => 1,
+                                                       'calls' => [
+                                                                    '_alternation_1_of_production_1_of_rule_field_line'
+                                                                  ],
+                                                       'changed' => 0,
+                                                       'opcount' => 0,
+                                                       'prods' => [
+                                                                    bless( {
+                                                                             'number' => '0',
+                                                                             'strcount' => 1,
+                                                                             'dircount' => 1,
+                                                                             'uncommit' => undef,
+                                                                             'error' => undef,
+                                                                             'patcount' => 0,
+                                                                             'actcount' => 0,
+                                                                             'items' => [
+                                                                                          bless( {
+                                                                                                   'hashname' => '__DIRECTIVE1__',
+                                                                                                   'name' => '<skip:\'[ \\t]*\'>',
+                                                                                                   'lookahead' => 0,
+                                                                                                   'line' => 69,
+                                                                                                   'code' => 'my $oldskip = $skip; $skip=\'[ \\t]*\'; $oldskip'
+                                                                                                 }, 'Parse::RecDescent::Directive' ),
+                                                                                          bless( {
+                                                                                                   'subrule' => '_alternation_1_of_production_1_of_rule_field_line',
+                                                                                                   'matchrule' => 0,
+                                                                                                   'implicit' => 'field, or comment, or blank',
+                                                                                                   'argcode' => undef,
+                                                                                                   'lookahead' => 0,
+                                                                                                   'line' => 69
+                                                                                                 }, 'Parse::RecDescent::Subrule' ),
+                                                                                          bless( {
+                                                                                                   'pattern' => '\\n',
+                                                                                                   'hashname' => '__STRING1__',
+                                                                                                   'description' => '\'\\\\n\'',
+                                                                                                   'lookahead' => 0,
+                                                                                                   'line' => 69
+                                                                                                 }, 'Parse::RecDescent::InterpLit' )
+                                                                                        ],
+                                                                             'line' => undef
+                                                                           }, 'Parse::RecDescent::Production' )
+                                                                  ],
+                                                       'name' => 'field_line',
+                                                       'vars' => '',
+                                                       'line' => 69
+                                                     }, 'Parse::RecDescent::Rule' ),
                               'author' => bless( {
                                                    'impcount' => 0,
                                                    'calls' => [],
@@ -8306,7 +11714,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                'hashname' => '__STRING1__',
                                                                                                'description' => '\'!author\'',
                                                                                                'lookahead' => 0,
-                                                                                               'line' => 44
+                                                                                               'line' => 76
                                                                                              }, 'Parse::RecDescent::Literal' ),
                                                                                       bless( {
                                                                                                'pattern' => '.*',
@@ -8314,14 +11722,14 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                'description' => '/.*/',
                                                                                                'lookahead' => 0,
                                                                                                'rdelim' => '/',
-                                                                                               'line' => 44,
+                                                                                               'line' => 76,
                                                                                                'mod' => '',
                                                                                                'ldelim' => '/'
                                                                                              }, 'Parse::RecDescent::Token' ),
                                                                                       bless( {
                                                                                                'hashname' => '__ACTION1__',
                                                                                                'lookahead' => 0,
-                                                                                               'line' => 45,
+                                                                                               'line' => 77,
                                                                                                'code' => '{ $author = $item[2] }'
                                                                                              }, 'Parse::RecDescent::Action' )
                                                                                     ],
@@ -8330,7 +11738,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                               ],
                                                    'name' => 'author',
                                                    'vars' => '',
-                                                   'line' => 44
+                                                   'line' => 76
                                                  }, 'Parse::RecDescent::Rule' ),
                               'size' => bless( {
                                                  'impcount' => 0,
@@ -8353,14 +11761,14 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                              'description' => '/\\\\d+/',
                                                                                              'lookahead' => 0,
                                                                                              'rdelim' => '/',
-                                                                                             'line' => 91,
+                                                                                             'line' => 143,
                                                                                              'mod' => '',
                                                                                              'ldelim' => '/'
                                                                                            }, 'Parse::RecDescent::Token' ),
                                                                                     bless( {
                                                                                              'hashname' => '__ACTION1__',
                                                                                              'lookahead' => 0,
-                                                                                             'line' => 92,
+                                                                                             'line' => 144,
                                                                                              'code' => '{ $size = $item[1] }'
                                                                                            }, 'Parse::RecDescent::Action' )
                                                                                   ],
@@ -8369,8 +11777,62 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                             ],
                                                  'name' => 'size',
                                                  'vars' => '',
-                                                 'line' => 91
+                                                 'line' => 143
                                                }, 'Parse::RecDescent::Rule' ),
+                              '_alternation_1_of_production_1_of_rule_label' => bless( {
+                                                                                         'impcount' => 0,
+                                                                                         'calls' => [
+                                                                                                      'simple_multiword',
+                                                                                                      'quoted_string'
+                                                                                                    ],
+                                                                                         'changed' => 0,
+                                                                                         'opcount' => 0,
+                                                                                         'prods' => [
+                                                                                                      bless( {
+                                                                                                               'number' => '0',
+                                                                                                               'strcount' => 0,
+                                                                                                               'dircount' => 0,
+                                                                                                               'uncommit' => undef,
+                                                                                                               'error' => undef,
+                                                                                                               'patcount' => 0,
+                                                                                                               'actcount' => 0,
+                                                                                                               'items' => [
+                                                                                                                            bless( {
+                                                                                                                                     'subrule' => 'simple_multiword',
+                                                                                                                                     'matchrule' => 0,
+                                                                                                                                     'implicit' => undef,
+                                                                                                                                     'argcode' => undef,
+                                                                                                                                     'lookahead' => 0,
+                                                                                                                                     'line' => 192
+                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
+                                                                                                                          ],
+                                                                                                               'line' => undef
+                                                                                                             }, 'Parse::RecDescent::Production' ),
+                                                                                                      bless( {
+                                                                                                               'number' => '1',
+                                                                                                               'strcount' => 0,
+                                                                                                               'dircount' => 0,
+                                                                                                               'uncommit' => undef,
+                                                                                                               'error' => undef,
+                                                                                                               'patcount' => 0,
+                                                                                                               'actcount' => 0,
+                                                                                                               'items' => [
+                                                                                                                            bless( {
+                                                                                                                                     'subrule' => 'quoted_string',
+                                                                                                                                     'matchrule' => 0,
+                                                                                                                                     'implicit' => undef,
+                                                                                                                                     'argcode' => undef,
+                                                                                                                                     'lookahead' => 0,
+                                                                                                                                     'line' => 192
+                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
+                                                                                                                          ],
+                                                                                                               'line' => 192
+                                                                                                             }, 'Parse::RecDescent::Production' )
+                                                                                                    ],
+                                                                                         'name' => '_alternation_1_of_production_1_of_rule_label',
+                                                                                         'vars' => '',
+                                                                                         'line' => 192
+                                                                                       }, 'Parse::RecDescent::Rule' ),
                               'var_name' => bless( {
                                                      'impcount' => 0,
                                                      'calls' => [],
@@ -8392,7 +11854,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                  'description' => '/[A-Z_]+/',
                                                                                                  'lookahead' => 0,
                                                                                                  'rdelim' => '/',
-                                                                                                 'line' => 87,
+                                                                                                 'line' => 139,
                                                                                                  'mod' => '',
                                                                                                  'ldelim' => '/'
                                                                                                }, 'Parse::RecDescent::Token' )
@@ -8402,12 +11864,12 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                 ],
                                                      'name' => 'var_name',
                                                      'vars' => '',
-                                                     'line' => 87
+                                                     'line' => 139
                                                    }, 'Parse::RecDescent::Rule' ),
                               'option' => bless( {
-                                                   'impcount' => 0,
+                                                   'impcount' => 1,
                                                    'calls' => [
-                                                                'value',
+                                                                '_alternation_1_of_production_1_of_rule_option',
                                                                 'display_text'
                                                               ],
                                                    'changed' => 0,
@@ -8423,12 +11885,12 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                          'actcount' => 1,
                                                                          'items' => [
                                                                                       bless( {
-                                                                                               'subrule' => 'value',
+                                                                                               'subrule' => '_alternation_1_of_production_1_of_rule_option',
                                                                                                'matchrule' => 0,
-                                                                                               'implicit' => undef,
+                                                                                               'implicit' => 'simple_multiword, or value, or quoted_string',
                                                                                                'argcode' => undef,
                                                                                                'lookahead' => 0,
-                                                                                               'line' => 111
+                                                                                               'line' => 171
                                                                                              }, 'Parse::RecDescent::Subrule' ),
                                                                                       bless( {
                                                                                                'subrule' => 'display_text',
@@ -8439,13 +11901,13 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                'matchrule' => 0,
                                                                                                'repspec' => '?',
                                                                                                'lookahead' => 0,
-                                                                                               'line' => 111
+                                                                                               'line' => 171
                                                                                              }, 'Parse::RecDescent::Repetition' ),
                                                                                       bless( {
                                                                                                'hashname' => '__ACTION1__',
                                                                                                'lookahead' => 0,
-                                                                                               'line' => 112,
-                                                                                               'code' => '{ push @options, { $item{value} => $item{\'display_text(?)\'}[0] } }'
+                                                                                               'line' => 172,
+                                                                                               'code' => '{ push @options, { $item[1] => $item{\'display_text(?)\'}[0] } }'
                                                                                              }, 'Parse::RecDescent::Action' )
                                                                                     ],
                                                                          'line' => undef
@@ -8453,8 +11915,123 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                               ],
                                                    'name' => 'option',
                                                    'vars' => '',
-                                                   'line' => 111
+                                                   'line' => 171
                                                  }, 'Parse::RecDescent::Rule' ),
+                              'group_field' => bless( {
+                                                        'impcount' => 0,
+                                                        'calls' => [
+                                                                     'group_name',
+                                                                     'name',
+                                                                     'label'
+                                                                   ],
+                                                        'changed' => 0,
+                                                        'opcount' => 0,
+                                                        'prods' => [
+                                                                     bless( {
+                                                                              'number' => '0',
+                                                                              'strcount' => 1,
+                                                                              'dircount' => 0,
+                                                                              'uncommit' => undef,
+                                                                              'error' => undef,
+                                                                              'patcount' => 0,
+                                                                              'actcount' => 1,
+                                                                              'items' => [
+                                                                                           bless( {
+                                                                                                    'pattern' => '!field',
+                                                                                                    'hashname' => '__STRING1__',
+                                                                                                    'description' => '\'!field\'',
+                                                                                                    'lookahead' => 0,
+                                                                                                    'line' => 91
+                                                                                                  }, 'Parse::RecDescent::Literal' ),
+                                                                                           bless( {
+                                                                                                    'subrule' => 'group_name',
+                                                                                                    'matchrule' => 0,
+                                                                                                    'implicit' => undef,
+                                                                                                    'argcode' => undef,
+                                                                                                    'lookahead' => 0,
+                                                                                                    'line' => 91
+                                                                                                  }, 'Parse::RecDescent::Subrule' ),
+                                                                                           bless( {
+                                                                                                    'subrule' => 'name',
+                                                                                                    'matchrule' => 0,
+                                                                                                    'implicit' => undef,
+                                                                                                    'argcode' => undef,
+                                                                                                    'lookahead' => 0,
+                                                                                                    'line' => 91
+                                                                                                  }, 'Parse::RecDescent::Subrule' ),
+                                                                                           bless( {
+                                                                                                    'subrule' => 'label',
+                                                                                                    'expected' => undef,
+                                                                                                    'min' => 0,
+                                                                                                    'argcode' => undef,
+                                                                                                    'max' => 1,
+                                                                                                    'matchrule' => 0,
+                                                                                                    'repspec' => '?',
+                                                                                                    'lookahead' => 0,
+                                                                                                    'line' => 91
+                                                                                                  }, 'Parse::RecDescent::Repetition' ),
+                                                                                           bless( {
+                                                                                                    'hashname' => '__ACTION1__',
+                                                                                                    'lookahead' => 0,
+                                                                                                    'line' => 92,
+                                                                                                    'code' => '{ #warn "[$thisline] $item{group_name}\\n"; 
+    push @lines, [ \'group\', { name => $item{name}, label => $item{\'label(?)\'}[0], group => $item{group_name} } ];
+    }'
+                                                                                                  }, 'Parse::RecDescent::Action' )
+                                                                                         ],
+                                                                              'line' => undef
+                                                                            }, 'Parse::RecDescent::Production' )
+                                                                   ],
+                                                        'name' => 'group_field',
+                                                        'vars' => '',
+                                                        'line' => 91
+                                                      }, 'Parse::RecDescent::Rule' ),
+                              'validate' => bless( {
+                                                     'impcount' => 1,
+                                                     'calls' => [
+                                                                  '_alternation_1_of_production_1_of_rule_validate'
+                                                                ],
+                                                     'changed' => 0,
+                                                     'opcount' => 0,
+                                                     'prods' => [
+                                                                  bless( {
+                                                                           'number' => '0',
+                                                                           'strcount' => 1,
+                                                                           'dircount' => 0,
+                                                                           'uncommit' => undef,
+                                                                           'error' => undef,
+                                                                           'patcount' => 0,
+                                                                           'actcount' => 1,
+                                                                           'items' => [
+                                                                                        bless( {
+                                                                                                 'pattern' => '//',
+                                                                                                 'hashname' => '__STRING1__',
+                                                                                                 'description' => '\'//\'',
+                                                                                                 'lookahead' => 0,
+                                                                                                 'line' => 178
+                                                                                               }, 'Parse::RecDescent::Literal' ),
+                                                                                        bless( {
+                                                                                                 'subrule' => '_alternation_1_of_production_1_of_rule_validate',
+                                                                                                 'matchrule' => 0,
+                                                                                                 'implicit' => 'optional_pattern, or required_pattern',
+                                                                                                 'argcode' => undef,
+                                                                                                 'lookahead' => 0,
+                                                                                                 'line' => 178
+                                                                                               }, 'Parse::RecDescent::Subrule' ),
+                                                                                        bless( {
+                                                                                                 'hashname' => '__ACTION1__',
+                                                                                                 'lookahead' => 0,
+                                                                                                 'line' => 178,
+                                                                                                 'code' => '{ $item[2] }'
+                                                                                               }, 'Parse::RecDescent::Action' )
+                                                                                      ],
+                                                                           'line' => undef
+                                                                         }, 'Parse::RecDescent::Production' )
+                                                                ],
+                                                     'name' => 'validate',
+                                                     'vars' => '',
+                                                     'line' => 178
+                                                   }, 'Parse::RecDescent::Rule' ),
                               'list_var' => bless( {
                                                      'impcount' => 0,
                                                      'calls' => [],
@@ -8476,14 +12053,14 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                  'description' => '/@[A-Z_]+/',
                                                                                                  'lookahead' => 0,
                                                                                                  'rdelim' => '/',
-                                                                                                 'line' => 109,
+                                                                                                 'line' => 169,
                                                                                                  'mod' => '',
                                                                                                  'ldelim' => '/'
                                                                                                }, 'Parse::RecDescent::Token' ),
                                                                                         bless( {
                                                                                                  'hashname' => '__ACTION1__',
                                                                                                  'lookahead' => 0,
-                                                                                                 'line' => 109,
+                                                                                                 'line' => 169,
                                                                                                  'code' => '{ $list_var = $item[1] }'
                                                                                                }, 'Parse::RecDescent::Action' )
                                                                                       ],
@@ -8492,47 +12069,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                 ],
                                                      'name' => 'list_var',
                                                      'vars' => '',
-                                                     'line' => 109
-                                                   }, 'Parse::RecDescent::Rule' ),
-                              'validate' => bless( {
-                                                     'impcount' => 0,
-                                                     'calls' => [
-                                                                  'value'
-                                                                ],
-                                                     'changed' => 0,
-                                                     'opcount' => 0,
-                                                     'prods' => [
-                                                                  bless( {
-                                                                           'number' => '0',
-                                                                           'strcount' => 1,
-                                                                           'dircount' => 0,
-                                                                           'uncommit' => undef,
-                                                                           'error' => undef,
-                                                                           'patcount' => 0,
-                                                                           'actcount' => 0,
-                                                                           'items' => [
-                                                                                        bless( {
-                                                                                                 'pattern' => '//',
-                                                                                                 'hashname' => '__STRING1__',
-                                                                                                 'description' => '\'//\'',
-                                                                                                 'lookahead' => 0,
-                                                                                                 'line' => 118
-                                                                                               }, 'Parse::RecDescent::Literal' ),
-                                                                                        bless( {
-                                                                                                 'subrule' => 'value',
-                                                                                                 'matchrule' => 0,
-                                                                                                 'implicit' => undef,
-                                                                                                 'argcode' => undef,
-                                                                                                 'lookahead' => 0,
-                                                                                                 'line' => 118
-                                                                                               }, 'Parse::RecDescent::Subrule' )
-                                                                                      ],
-                                                                           'line' => undef
-                                                                         }, 'Parse::RecDescent::Production' )
-                                                                ],
-                                                     'name' => 'validate',
-                                                     'vars' => '',
-                                                     'line' => 118
+                                                     'line' => 169
                                                    }, 'Parse::RecDescent::Rule' ),
                               '_alternation_1_of_production_1_of_rule_line' => bless( {
                                                                                         'impcount' => 0,
@@ -8541,6 +12078,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                      'author',
                                                                                                      'pattern_def',
                                                                                                      'heading',
+                                                                                                     'group_field',
                                                                                                      'unknown_directive',
                                                                                                      'field',
                                                                                                      'comment',
@@ -8564,7 +12102,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                     'implicit' => undef,
                                                                                                                                     'argcode' => undef,
                                                                                                                                     'lookahead' => 0,
-                                                                                                                                    'line' => 128
+                                                                                                                                    'line' => 192
                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                                                          ],
                                                                                                               'line' => undef
@@ -8584,10 +12122,10 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                     'implicit' => undef,
                                                                                                                                     'argcode' => undef,
                                                                                                                                     'lookahead' => 0,
-                                                                                                                                    'line' => 128
+                                                                                                                                    'line' => 192
                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                                                          ],
-                                                                                                              'line' => 128
+                                                                                                              'line' => 192
                                                                                                             }, 'Parse::RecDescent::Production' ),
                                                                                                      bless( {
                                                                                                               'number' => '2',
@@ -8604,10 +12142,10 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                     'implicit' => undef,
                                                                                                                                     'argcode' => undef,
                                                                                                                                     'lookahead' => 0,
-                                                                                                                                    'line' => 128
+                                                                                                                                    'line' => 192
                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                                                          ],
-                                                                                                              'line' => 128
+                                                                                                              'line' => 192
                                                                                                             }, 'Parse::RecDescent::Production' ),
                                                                                                      bless( {
                                                                                                               'number' => '3',
@@ -8624,13 +12162,33 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                     'implicit' => undef,
                                                                                                                                     'argcode' => undef,
                                                                                                                                     'lookahead' => 0,
-                                                                                                                                    'line' => 128
+                                                                                                                                    'line' => 192
                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                                                          ],
-                                                                                                              'line' => 128
+                                                                                                              'line' => 192
                                                                                                             }, 'Parse::RecDescent::Production' ),
                                                                                                      bless( {
                                                                                                               'number' => '4',
+                                                                                                              'strcount' => 0,
+                                                                                                              'dircount' => 0,
+                                                                                                              'uncommit' => undef,
+                                                                                                              'error' => undef,
+                                                                                                              'patcount' => 0,
+                                                                                                              'actcount' => 0,
+                                                                                                              'items' => [
+                                                                                                                           bless( {
+                                                                                                                                    'subrule' => 'group_field',
+                                                                                                                                    'matchrule' => 0,
+                                                                                                                                    'implicit' => undef,
+                                                                                                                                    'argcode' => undef,
+                                                                                                                                    'lookahead' => 0,
+                                                                                                                                    'line' => 192
+                                                                                                                                  }, 'Parse::RecDescent::Subrule' )
+                                                                                                                         ],
+                                                                                                              'line' => 192
+                                                                                                            }, 'Parse::RecDescent::Production' ),
+                                                                                                     bless( {
+                                                                                                              'number' => '5',
                                                                                                               'strcount' => 0,
                                                                                                               'dircount' => 0,
                                                                                                               'uncommit' => undef,
@@ -8644,13 +12202,13 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                     'implicit' => undef,
                                                                                                                                     'argcode' => undef,
                                                                                                                                     'lookahead' => 0,
-                                                                                                                                    'line' => 128
+                                                                                                                                    'line' => 192
                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                                                          ],
-                                                                                                              'line' => 128
+                                                                                                              'line' => 192
                                                                                                             }, 'Parse::RecDescent::Production' ),
                                                                                                      bless( {
-                                                                                                              'number' => '5',
+                                                                                                              'number' => '6',
                                                                                                               'strcount' => 0,
                                                                                                               'dircount' => 0,
                                                                                                               'uncommit' => undef,
@@ -8664,13 +12222,13 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                     'implicit' => undef,
                                                                                                                                     'argcode' => undef,
                                                                                                                                     'lookahead' => 0,
-                                                                                                                                    'line' => 128
+                                                                                                                                    'line' => 192
                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                                                          ],
-                                                                                                              'line' => 128
+                                                                                                              'line' => 192
                                                                                                             }, 'Parse::RecDescent::Production' ),
                                                                                                      bless( {
-                                                                                                              'number' => '6',
+                                                                                                              'number' => '7',
                                                                                                               'strcount' => 0,
                                                                                                               'dircount' => 0,
                                                                                                               'uncommit' => undef,
@@ -8684,13 +12242,13 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                     'implicit' => undef,
                                                                                                                                     'argcode' => undef,
                                                                                                                                     'lookahead' => 0,
-                                                                                                                                    'line' => 128
+                                                                                                                                    'line' => 192
                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                                                          ],
-                                                                                                              'line' => 128
+                                                                                                              'line' => 192
                                                                                                             }, 'Parse::RecDescent::Production' ),
                                                                                                      bless( {
-                                                                                                              'number' => '7',
+                                                                                                              'number' => '8',
                                                                                                               'strcount' => 0,
                                                                                                               'dircount' => 0,
                                                                                                               'uncommit' => undef,
@@ -8704,16 +12262,49 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                     'implicit' => undef,
                                                                                                                                     'argcode' => undef,
                                                                                                                                     'lookahead' => 0,
-                                                                                                                                    'line' => 128
+                                                                                                                                    'line' => 192
                                                                                                                                   }, 'Parse::RecDescent::Subrule' )
                                                                                                                          ],
-                                                                                                              'line' => 128
+                                                                                                              'line' => 192
                                                                                                             }, 'Parse::RecDescent::Production' )
                                                                                                    ],
                                                                                         'name' => '_alternation_1_of_production_1_of_rule_line',
                                                                                         'vars' => '',
-                                                                                        'line' => 128
+                                                                                        'line' => 192
                                                                                       }, 'Parse::RecDescent::Rule' ),
+                              'group_name' => bless( {
+                                                       'impcount' => 0,
+                                                       'calls' => [],
+                                                       'changed' => 0,
+                                                       'opcount' => 0,
+                                                       'prods' => [
+                                                                    bless( {
+                                                                             'number' => '0',
+                                                                             'strcount' => 0,
+                                                                             'dircount' => 0,
+                                                                             'uncommit' => undef,
+                                                                             'error' => undef,
+                                                                             'patcount' => 1,
+                                                                             'actcount' => 0,
+                                                                             'items' => [
+                                                                                          bless( {
+                                                                                                   'pattern' => '%[A-Z_]+',
+                                                                                                   'hashname' => '__PATTERN1__',
+                                                                                                   'description' => '/%[A-Z_]+/',
+                                                                                                   'lookahead' => 0,
+                                                                                                   'rdelim' => '/',
+                                                                                                   'line' => 96,
+                                                                                                   'mod' => '',
+                                                                                                   'ldelim' => '/'
+                                                                                                 }, 'Parse::RecDescent::Token' )
+                                                                                        ],
+                                                                             'line' => undef
+                                                                           }, 'Parse::RecDescent::Production' )
+                                                                  ],
+                                                       'name' => 'group_name',
+                                                       'vars' => '',
+                                                       'line' => 96
+                                                     }, 'Parse::RecDescent::Rule' ),
                               '_alternation_1_of_production_1_of_rule_field_size' => bless( {
                                                                                               'impcount' => 0,
                                                                                               'calls' => [
@@ -8738,7 +12329,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                           'implicit' => undef,
                                                                                                                                           'argcode' => undef,
                                                                                                                                           'lookahead' => 0,
-                                                                                                                                          'line' => 128
+                                                                                                                                          'line' => 192
                                                                                                                                         }, 'Parse::RecDescent::Subrule' )
                                                                                                                                ],
                                                                                                                     'line' => undef
@@ -8758,16 +12349,69 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                           'implicit' => undef,
                                                                                                                                           'argcode' => undef,
                                                                                                                                           'lookahead' => 0,
-                                                                                                                                          'line' => 128
+                                                                                                                                          'line' => 192
                                                                                                                                         }, 'Parse::RecDescent::Subrule' )
                                                                                                                                ],
-                                                                                                                    'line' => 128
+                                                                                                                    'line' => 192
                                                                                                                   }, 'Parse::RecDescent::Production' )
                                                                                                          ],
                                                                                               'name' => '_alternation_1_of_production_1_of_rule_field_size',
                                                                                               'vars' => '',
-                                                                                              'line' => 128
+                                                                                              'line' => 192
                                                                                             }, 'Parse::RecDescent::Rule' ),
+                              'display_text' => bless( {
+                                                         'impcount' => 0,
+                                                         'calls' => [],
+                                                         'changed' => 0,
+                                                         'opcount' => 0,
+                                                         'prods' => [
+                                                                      bless( {
+                                                                               'number' => '0',
+                                                                               'strcount' => 2,
+                                                                               'dircount' => 0,
+                                                                               'uncommit' => undef,
+                                                                               'error' => undef,
+                                                                               'patcount' => 1,
+                                                                               'actcount' => 1,
+                                                                               'items' => [
+                                                                                            bless( {
+                                                                                                     'pattern' => '[',
+                                                                                                     'hashname' => '__STRING1__',
+                                                                                                     'description' => '\'[\'',
+                                                                                                     'lookahead' => 0,
+                                                                                                     'line' => 176
+                                                                                                   }, 'Parse::RecDescent::Literal' ),
+                                                                                            bless( {
+                                                                                                     'pattern' => '[^\\]]+',
+                                                                                                     'hashname' => '__PATTERN1__',
+                                                                                                     'description' => '/[^\\\\]]+/i',
+                                                                                                     'lookahead' => 0,
+                                                                                                     'rdelim' => '/',
+                                                                                                     'line' => 176,
+                                                                                                     'mod' => 'i',
+                                                                                                     'ldelim' => '/'
+                                                                                                   }, 'Parse::RecDescent::Token' ),
+                                                                                            bless( {
+                                                                                                     'pattern' => ']',
+                                                                                                     'hashname' => '__STRING2__',
+                                                                                                     'description' => '\']\'',
+                                                                                                     'lookahead' => 0,
+                                                                                                     'line' => 176
+                                                                                                   }, 'Parse::RecDescent::Literal' ),
+                                                                                            bless( {
+                                                                                                     'hashname' => '__ACTION1__',
+                                                                                                     'lookahead' => 0,
+                                                                                                     'line' => 176,
+                                                                                                     'code' => '{ $item[2] }'
+                                                                                                   }, 'Parse::RecDescent::Action' )
+                                                                                          ],
+                                                                               'line' => undef
+                                                                             }, 'Parse::RecDescent::Production' )
+                                                                    ],
+                                                         'name' => 'display_text',
+                                                         'vars' => '',
+                                                         'line' => 176
+                                                       }, 'Parse::RecDescent::Rule' ),
                               '_alternation_1_of_production_1_of_rule_list_def' => bless( {
                                                                                             'impcount' => 0,
                                                                                             'calls' => [
@@ -8792,7 +12436,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                         'implicit' => undef,
                                                                                                                                         'argcode' => undef,
                                                                                                                                         'lookahead' => 0,
-                                                                                                                                        'line' => 128
+                                                                                                                                        'line' => 192
                                                                                                                                       }, 'Parse::RecDescent::Subrule' )
                                                                                                                              ],
                                                                                                                   'line' => undef
@@ -8812,69 +12456,76 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                                         'implicit' => undef,
                                                                                                                                         'argcode' => undef,
                                                                                                                                         'lookahead' => 0,
-                                                                                                                                        'line' => 128
+                                                                                                                                        'line' => 192
                                                                                                                                       }, 'Parse::RecDescent::Subrule' )
                                                                                                                              ],
-                                                                                                                  'line' => 128
+                                                                                                                  'line' => 192
                                                                                                                 }, 'Parse::RecDescent::Production' )
                                                                                                        ],
                                                                                             'name' => '_alternation_1_of_production_1_of_rule_list_def',
                                                                                             'vars' => '',
-                                                                                            'line' => 128
+                                                                                            'line' => 192
                                                                                           }, 'Parse::RecDescent::Rule' ),
-                              'display_text' => bless( {
-                                                         'impcount' => 0,
-                                                         'calls' => [],
-                                                         'changed' => 0,
-                                                         'opcount' => 0,
-                                                         'prods' => [
-                                                                      bless( {
-                                                                               'number' => '0',
-                                                                               'strcount' => 2,
-                                                                               'dircount' => 0,
-                                                                               'uncommit' => undef,
-                                                                               'error' => undef,
-                                                                               'patcount' => 1,
-                                                                               'actcount' => 1,
-                                                                               'items' => [
-                                                                                            bless( {
-                                                                                                     'pattern' => '[',
-                                                                                                     'hashname' => '__STRING1__',
-                                                                                                     'description' => '\'[\'',
-                                                                                                     'lookahead' => 0,
-                                                                                                     'line' => 116
-                                                                                                   }, 'Parse::RecDescent::Literal' ),
-                                                                                            bless( {
-                                                                                                     'pattern' => '[^\\]]+',
-                                                                                                     'hashname' => '__PATTERN1__',
-                                                                                                     'description' => '/[^\\\\]]+/i',
-                                                                                                     'lookahead' => 0,
-                                                                                                     'rdelim' => '/',
-                                                                                                     'line' => 116,
-                                                                                                     'mod' => 'i',
-                                                                                                     'ldelim' => '/'
-                                                                                                   }, 'Parse::RecDescent::Token' ),
-                                                                                            bless( {
-                                                                                                     'pattern' => ']',
-                                                                                                     'hashname' => '__STRING2__',
-                                                                                                     'description' => '\']\'',
-                                                                                                     'lookahead' => 0,
-                                                                                                     'line' => 116
-                                                                                                   }, 'Parse::RecDescent::Literal' ),
-                                                                                            bless( {
-                                                                                                     'hashname' => '__ACTION1__',
-                                                                                                     'lookahead' => 0,
-                                                                                                     'line' => 116,
-                                                                                                     'code' => '{ $item[2] }'
-                                                                                                   }, 'Parse::RecDescent::Action' )
-                                                                                          ],
-                                                                               'line' => undef
-                                                                             }, 'Parse::RecDescent::Production' )
-                                                                    ],
-                                                         'name' => 'display_text',
-                                                         'vars' => '',
-                                                         'line' => 116
-                                                       }, 'Parse::RecDescent::Rule' ),
+                              'quoted_string' => bless( {
+                                                          'impcount' => 0,
+                                                          'calls' => [],
+                                                          'changed' => 0,
+                                                          'opcount' => 0,
+                                                          'prods' => [
+                                                                       bless( {
+                                                                                'number' => '0',
+                                                                                'strcount' => 2,
+                                                                                'dircount' => 1,
+                                                                                'uncommit' => undef,
+                                                                                'error' => undef,
+                                                                                'patcount' => 1,
+                                                                                'actcount' => 1,
+                                                                                'items' => [
+                                                                                             bless( {
+                                                                                                      'hashname' => '__DIRECTIVE1__',
+                                                                                                      'name' => '<skip:\'\'>',
+                                                                                                      'lookahead' => 0,
+                                                                                                      'line' => 162,
+                                                                                                      'code' => 'my $oldskip = $skip; $skip=\'\'; $oldskip'
+                                                                                                    }, 'Parse::RecDescent::Directive' ),
+                                                                                             bless( {
+                                                                                                      'pattern' => '\'',
+                                                                                                      'hashname' => '__STRING1__',
+                                                                                                      'description' => '\'\'\'',
+                                                                                                      'lookahead' => 0,
+                                                                                                      'line' => 162
+                                                                                                    }, 'Parse::RecDescent::InterpLit' ),
+                                                                                             bless( {
+                                                                                                      'pattern' => '(\\\\\'|[^\'])*',
+                                                                                                      'hashname' => '__PATTERN1__',
+                                                                                                      'description' => '/(\\\\\\\\\'|[^\'])*/',
+                                                                                                      'lookahead' => 0,
+                                                                                                      'rdelim' => '/',
+                                                                                                      'line' => 162,
+                                                                                                      'mod' => '',
+                                                                                                      'ldelim' => '/'
+                                                                                                    }, 'Parse::RecDescent::Token' ),
+                                                                                             bless( {
+                                                                                                      'pattern' => '\'',
+                                                                                                      'hashname' => '__STRING2__',
+                                                                                                      'description' => '\'\'\'',
+                                                                                                      'lookahead' => 0,
+                                                                                                      'line' => 162
+                                                                                                    }, 'Parse::RecDescent::InterpLit' ),
+                                                                                             bless( {
+                                                                                                      'hashname' => '__ACTION1__',
+                                                                                                      'lookahead' => 0,
+                                                                                                      'line' => 163,
+                                                                                                      'code' => '{ $item[3] =~ s/\\\\\'/\'/g; $item[3] }'
+                                                                                                    }, 'Parse::RecDescent::Action' )
+                                                                                           ],
+                                                                                'line' => undef
+                                                                              }, 'Parse::RecDescent::Production' )
+                                                                     ],
+                                                          'name' => 'quoted_string',
+                                                          'vars' => '',
+                                                          'line' => 161
+                                                        }, 'Parse::RecDescent::Rule' ),
                               'pattern' => bless( {
                                                     'impcount' => 0,
                                                     'calls' => [],
@@ -8896,7 +12547,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'description' => '/.*/',
                                                                                                 'lookahead' => 0,
                                                                                                 'rdelim' => '/',
-                                                                                                'line' => 50,
+                                                                                                'line' => 82,
                                                                                                 'mod' => '',
                                                                                                 'ldelim' => '/'
                                                                                               }, 'Parse::RecDescent::Token' )
@@ -8906,7 +12557,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                ],
                                                     'name' => 'pattern',
                                                     'vars' => '',
-                                                    'line' => 50
+                                                    'line' => 82
                                                   }, 'Parse::RecDescent::Rule' ),
                               'comment' => bless( {
                                                     'impcount' => 0,
@@ -8928,7 +12579,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'hashname' => '__STRING1__',
                                                                                                 'description' => '\'#\'',
                                                                                                 'lookahead' => 0,
-                                                                                                'line' => 120
+                                                                                                'line' => 184
                                                                                               }, 'Parse::RecDescent::Literal' ),
                                                                                        bless( {
                                                                                                 'pattern' => '.*',
@@ -8936,7 +12587,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                 'description' => '/.*/',
                                                                                                 'lookahead' => 0,
                                                                                                 'rdelim' => '/',
-                                                                                                'line' => 120,
+                                                                                                'line' => 184,
                                                                                                 'mod' => '',
                                                                                                 'ldelim' => '/'
                                                                                               }, 'Parse::RecDescent::Token' )
@@ -8946,8 +12597,83 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                ],
                                                     'name' => 'comment',
                                                     'vars' => '',
-                                                    'line' => 120
+                                                    'line' => 184
                                                   }, 'Parse::RecDescent::Rule' ),
+                              '_alternation_1_of_production_1_of_rule_option' => bless( {
+                                                                                          'impcount' => 0,
+                                                                                          'calls' => [
+                                                                                                       'simple_multiword',
+                                                                                                       'value',
+                                                                                                       'quoted_string'
+                                                                                                     ],
+                                                                                          'changed' => 0,
+                                                                                          'opcount' => 0,
+                                                                                          'prods' => [
+                                                                                                       bless( {
+                                                                                                                'number' => '0',
+                                                                                                                'strcount' => 0,
+                                                                                                                'dircount' => 0,
+                                                                                                                'uncommit' => undef,
+                                                                                                                'error' => undef,
+                                                                                                                'patcount' => 0,
+                                                                                                                'actcount' => 0,
+                                                                                                                'items' => [
+                                                                                                                             bless( {
+                                                                                                                                      'subrule' => 'simple_multiword',
+                                                                                                                                      'matchrule' => 0,
+                                                                                                                                      'implicit' => undef,
+                                                                                                                                      'argcode' => undef,
+                                                                                                                                      'lookahead' => 0,
+                                                                                                                                      'line' => 192
+                                                                                                                                    }, 'Parse::RecDescent::Subrule' )
+                                                                                                                           ],
+                                                                                                                'line' => undef
+                                                                                                              }, 'Parse::RecDescent::Production' ),
+                                                                                                       bless( {
+                                                                                                                'number' => '1',
+                                                                                                                'strcount' => 0,
+                                                                                                                'dircount' => 0,
+                                                                                                                'uncommit' => undef,
+                                                                                                                'error' => undef,
+                                                                                                                'patcount' => 0,
+                                                                                                                'actcount' => 0,
+                                                                                                                'items' => [
+                                                                                                                             bless( {
+                                                                                                                                      'subrule' => 'value',
+                                                                                                                                      'matchrule' => 0,
+                                                                                                                                      'implicit' => undef,
+                                                                                                                                      'argcode' => undef,
+                                                                                                                                      'lookahead' => 0,
+                                                                                                                                      'line' => 192
+                                                                                                                                    }, 'Parse::RecDescent::Subrule' )
+                                                                                                                           ],
+                                                                                                                'line' => 192
+                                                                                                              }, 'Parse::RecDescent::Production' ),
+                                                                                                       bless( {
+                                                                                                                'number' => '2',
+                                                                                                                'strcount' => 0,
+                                                                                                                'dircount' => 0,
+                                                                                                                'uncommit' => undef,
+                                                                                                                'error' => undef,
+                                                                                                                'patcount' => 0,
+                                                                                                                'actcount' => 0,
+                                                                                                                'items' => [
+                                                                                                                             bless( {
+                                                                                                                                      'subrule' => 'quoted_string',
+                                                                                                                                      'matchrule' => 0,
+                                                                                                                                      'implicit' => undef,
+                                                                                                                                      'argcode' => undef,
+                                                                                                                                      'lookahead' => 0,
+                                                                                                                                      'line' => 192
+                                                                                                                                    }, 'Parse::RecDescent::Subrule' )
+                                                                                                                           ],
+                                                                                                                'line' => 192
+                                                                                                              }, 'Parse::RecDescent::Production' )
+                                                                                                     ],
+                                                                                          'name' => '_alternation_1_of_production_1_of_rule_option',
+                                                                                          'vars' => '',
+                                                                                          'line' => 192
+                                                                                        }, 'Parse::RecDescent::Rule' ),
                               'static_list' => bless( {
                                                         'impcount' => 0,
                                                         'calls' => [
@@ -8971,7 +12697,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                     'hashname' => '__STRING1__',
                                                                                                     'description' => '\'\\{\'',
                                                                                                     'lookahead' => 0,
-                                                                                                    'line' => 19
+                                                                                                    'line' => 43
                                                                                                   }, 'Parse::RecDescent::Literal' ),
                                                                                            bless( {
                                                                                                     'expected' => '<leftop: option /,\\\\s*/ option>',
@@ -8984,7 +12710,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                           'implicit' => undef,
                                                                                                                           'argcode' => undef,
                                                                                                                           'lookahead' => 0,
-                                                                                                                          'line' => 19
+                                                                                                                          'line' => 43
                                                                                                                         }, 'Parse::RecDescent::Subrule' ),
                                                                                                     'rightarg' => bless( {
                                                                                                                            'subrule' => 'option',
@@ -8992,7 +12718,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                            'implicit' => undef,
                                                                                                                            'argcode' => undef,
                                                                                                                            'lookahead' => 0,
-                                                                                                                           'line' => 19
+                                                                                                                           'line' => 43
                                                                                                                          }, 'Parse::RecDescent::Subrule' ),
                                                                                                     'hashname' => '__DIRECTIVE1__',
                                                                                                     'type' => 'leftop',
@@ -9002,7 +12728,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                                      'description' => '/,\\\\s*/',
                                                                                                                      'lookahead' => 0,
                                                                                                                      'rdelim' => '/',
-                                                                                                                     'line' => 19,
+                                                                                                                     'line' => 43,
                                                                                                                      'mod' => '',
                                                                                                                      'ldelim' => '/'
                                                                                                                    }, 'Parse::RecDescent::Token' )
@@ -9013,7 +12739,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                     'description' => '/,?/',
                                                                                                     'lookahead' => 0,
                                                                                                     'rdelim' => '/',
-                                                                                                    'line' => 19,
+                                                                                                    'line' => 43,
                                                                                                     'mod' => '',
                                                                                                     'ldelim' => '/'
                                                                                                   }, 'Parse::RecDescent::Token' ),
@@ -9022,7 +12748,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                     'hashname' => '__STRING2__',
                                                                                                     'description' => '\'\\}\'',
                                                                                                     'lookahead' => 0,
-                                                                                                    'line' => 19
+                                                                                                    'line' => 43
                                                                                                   }, 'Parse::RecDescent::Literal' )
                                                                                          ],
                                                                               'line' => undef
@@ -9030,7 +12756,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                    ],
                                                         'name' => 'static_list',
                                                         'vars' => '',
-                                                        'line' => 19
+                                                        'line' => 43
                                                       }, 'Parse::RecDescent::Rule' )
                             }
                }, 'Parse::RecDescent' );
