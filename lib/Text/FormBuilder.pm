@@ -6,8 +6,10 @@ use warnings;
 use base qw(Exporter Class::ParseText::Base);
 use vars qw($VERSION @EXPORT);
 
-$VERSION = '0.09_01';
+$VERSION = '0.09';
 @EXPORT = qw(create_form);
+
+#$::RD_TRACE = 1;
 
 use Carp;
 use Text::FormBuilder::Parser;
@@ -16,13 +18,13 @@ use CGI::FormBuilder;
 # the static default options passed to CGI::FormBuilder->new
 my %DEFAULT_OPTIONS = (
     method => 'GET',
-    javascript => 0,
     keepextras => 1,
 );
 
 # the built in CSS for the template
 my $DEFAULT_CSS = <<END;
 table { padding: 1em; }
+td table { padding: 0; } /* exclude the inner checkbox tables */
 #author, #footer { font-style: italic; }
 caption h2 { padding: .125em .5em; background: #ccc; text-align: left; }
 th { text-align: left; }
@@ -224,30 +226,40 @@ sub build {
         }
     }
     
-    # use the list for displaying checkbox groups
+    # use columns for displaying checkbox fields larger than 2 items
     foreach (@{ $self->{form_spec}{fields} }) {
-        $$_{ulist} = 1 if ref $$_{options} and @{ $$_{options} } >= 3;
+        if (ref $$_{options} and @{ $$_{options} } >= 3) {
+            $$_{columns} = int(@{ $$_{options} } / 8) + 1;
+        }
     }
     
     # remove extraneous undefined values
+    # also check for approriate version of CGI::FormBuilder
+    # for some advanced options
+    my $FB_version = CGI::FormBuilder->VERSION;
     for my $field (@{ $self->{form_spec}{fields} }) {
         defined $$field{$_} or delete $$field{$_} foreach keys %{ $field };
-    }
+        
+        unless ($FB_version >= '3.002') {
+            if ($$field{growable}) {
+                warn '[' . (caller(0))[3] . "] growable fields not supported by FB $FB_version (requires 3.002)";
+                delete $$field{growable};
+            }
+        }
+    }    
     
     # remove false $$_{required} params because this messes up things at
     # the CGI::FormBuilder::field level; it seems to be marking required
     # based on the existance of a 'required' param, not whether it is
     # true or defined
+    # TODO: check if this is still needed
     $$_{required} or delete $$_{required} foreach @{ $self->{form_spec}{fields} };
-
+    
+    # assign the field names to the sections
     foreach (@{ $self->{form_spec}{sections} }) {
-        #for my $line (grep { $$_[0] eq 'field' } @{ $$_{lines} }) {
         for my $line (@{ $$_{lines} }) {
             if ($$line[0] eq 'field') {
                 $$line[1] = $$line[1]{name};
-##                 $_ eq 'name' or delete $$line[1]{$_} foreach keys %{ $$line[1] };
-##             } elsif ($$line[0] eq 'group') {
-##                 $$line[1] = [ map { $$_{name} } @{ $$line[1]{group} } ];
             }
         }
     }
@@ -348,19 +360,6 @@ sub _form_code {
     
     my %module_subs;
     my $d = Data::Dumper->new([ \%options ], [ '*options' ]);
-    
-    use B::Deparse;
-    my $deparse = B::Deparse->new;
-##     
-##     #TODO: need a workaround/better solution since Data::Dumper doesn't like dumping coderefs
-##     foreach (@{ $self->{form_spec}{fields} }) {
-##         if (ref $$_{validate} eq 'CODE') {
-##             my $body = $deparse->coderef2text($$_{validate});
-##             #$d->Seen({ "*_validate_$$_{name}" => $$_{validate} });
-##             #$module_subs{$$_{name}} = "sub _validate_$$_{name} $$_{validate}";
-##         }
-##     }    
-##     my $sub_code = join("\n", each %module_subs);
     
     my $form_options = keys %options > 0 ? $d->Dump : '';
     
@@ -529,11 +528,12 @@ q[
                 $OUT .= (grep { $$_{required} } @group_fields) ? qq[<strong class="required">$$line[1]{label}:</strong>] : "$$line[1]{label}:";
                 $OUT .= qq[</th>\n];
                 
-                $OUT .= qq[    <td>];
+                $OUT .= qq[    <td><span class="fieldgroup">];
                 $OUT .= join(' ', map { qq[<small class="sublabel">$$_{label}</small> $$_{field} $$_{comment}] } @group_fields);
-                $OUT .= " $msg_invalid" if $$_{invalid};
-
-                $OUT .= qq[    </td>\n];
+                #TODO: allow comments on field groups
+                $OUT .= " ] . $msg_invalid . q[" if grep { $$_{invalid} } @group_fields;
+                
+                $OUT .= qq[    </span></td>\n];
                 $OUT .= qq[  </tr>\n];
             }   
         }
@@ -1048,7 +1048,16 @@ the size:
     title[40!]:text
 
 This currently only works for single line text fields.
-    
+
+To create a growable field, add a C<*> after the name (and size, if
+given). Growable fields have a button that allows the user to add a
+copy of the field input. Currently, this only works for C<text> and
+C<file> fields, and you must have L<CGI::FormBuilder> 3.02 or higher.
+Growable fields also require JavaScript to function correctly.
+
+    # you can have as many people as you like
+    person*:text
+
 For the input types that can have options (C<select>, C<radio>, and
 C<checkbox>), here's how you do it:
 
@@ -1073,20 +1082,6 @@ you should use the C<!list> directive:
     }
     
     month:select@MONTHS
-
-There is another form of the C<!list> directive: the dynamic list:
-
-    !list RANDOM &{ map { rand } (0..5) }
-
-The code inside the C<&{ ... }> is C<eval>ed by C<build>, and the results
-are stuffed into the list. The C<eval>ed code can either return a simple
-list, as the example does, or the fancier C<< ( { value1 => 'Description 1'},
-{ value2 => 'Description 2}, ... ) >> form.
-
-I<B<NOTE:> This feature of the language may go away unless I find a compelling
-reason for it in the next few versions. What I really wanted was lists that
-were filled in at run-time (e.g. from a database), and that can be done easily
-enough with the CGI::FormBuilder object directly.>
 
 If you want to have a single checkbox (e.g. for a field that says ``I want to
 recieve more information''), you can just specify the type as checkbox without
@@ -1149,6 +1144,13 @@ the name of the subfield defined in the group (e.g. C<month>, C<day>, C<year>).
 Thus in this example, you would end up with the form fields C<birthday_month>,
 C<birthday_day>, and C<birthday_year>.
 
+You can also use groups in normal field lines:
+    
+    birthday|Your birthday:DATE
+
+The only (currently) supported pieces of a fieldspec that may be used with a
+group in this notation are name and label.
+
 =head2 Comments
 
     # comment ...
@@ -1159,18 +1161,12 @@ Any line beginning with a C<#> is considered a comment.
 
 Document the commmand line tool
 
+Document use of the parser as a standalone module
+
 Allow renaming of the submit button; allow renaming and inclusion of a 
 reset button
 
-Allow groups to be used in normal field lines something like this:
-
-    !group DATE {
-        month
-        day
-        year
-    }
-    
-    dob|Your birthday:DATE
+Allow comments on group fields (rendered after the all the fields)
 
 Pieces that wouldn't make sense in a group field: size, row/col, options,
 validate. These should cause C<build> to emit a warning before ignoring them.
@@ -1206,6 +1202,9 @@ L<CGI::FormBuilder>, L<http://formbuilder.org>
 Thanks to eszpee for pointing out some bugs in the default value parsing,
 as well as some suggestions for i18n/l10n and splitting up long forms into
 sections.
+
+And of course, to Nathan Wiger, for giving use CGI::FormBuilder in the
+first place. Thanks Nate!
 
 =head1 AUTHOR
 
