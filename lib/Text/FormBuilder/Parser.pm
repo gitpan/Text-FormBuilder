@@ -1683,7 +1683,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::validate_def
 						if defined $::RD_TRACE;
 		
 
-		$_tok = ($_noactions) ? 0 : do { $subs{$item{var_name}} = $item[3] };
+		$_tok = ($_noactions) ? 0 : do { $subs{$item{var_name}} = eval "sub $item[3]" };
 		unless (defined $_tok)
 		{
 			Parse::RecDescent::_trace(q{<<Didn't match action>> (return value: [undef])})
@@ -10999,7 +10999,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                      'hashname' => '__ACTION1__',
                                                                                                      'lookahead' => 0,
                                                                                                      'line' => 77,
-                                                                                                     'code' => '{ $subs{$item{var_name}} = $item[3] }'
+                                                                                                     'code' => '{ $subs{$item{var_name}} = eval "sub $item[3]" }'
                                                                                                    }, 'Parse::RecDescent::Action' )
                                                                                           ],
                                                                                'line' => undef
