@@ -5,18 +5,31 @@ use warnings;
 
 use vars qw($VERSION);
 
-$VERSION = '0.06_01';
+$VERSION = '0.06_02';
 
 use Carp;
 use Text::FormBuilder::Parser;
 use CGI::FormBuilder;
 
-# the default options passed to CGI::FormBuilder->new
+# the static default options passed to CGI::FormBuilder->new
 my %DEFAULT_OPTIONS = (
     method => 'GET',
     javascript => 0,
     keepextras => 1,
 );
+
+# the built in CSS for the template
+my $DEFAULT_CSS = <<END;
+table { padding: 1em; }
+#author, #footer { font-style: italic; }
+caption h2 { padding: .125em .5em; background: #ccc; text-align: left; }
+th { text-align: left; }
+th h3 { padding: .125em .5em; background: #eee; }
+th.label { font-weight: normal; text-align: right; vertical-align: top; }
+td ul { list-style: none; padding-left: 0; margin-left: 0; }
+.sublabel { color: #999; }
+.invalid { background: red; }
+END
 
 sub new {
     my $invocant = shift;
@@ -73,10 +86,15 @@ sub build {
     # our custom %options:
     # form_only: use only the form part of the template
     my $form_only = $options{form_only};
-    delete $options{form_only};
+    my $css;
+    $css = $options{css} || $DEFAULT_CSS;
+    $css .= $options{extra_css} if $options{extra_css};
+    
+    # remove our custom options
+    delete $options{$_} foreach qw(form_only css extra_css);
     
     # substitute in custom pattern definitions for field validation
-    if (my %patterns = %{ $self->{form_spec}{patterns} }) {
+    if (my %patterns = %{ $self->{form_spec}{patterns} || {} }) {
         foreach (@{ $self->{form_spec}{fields} }) {
             if ($$_{validate} and exists $patterns{$$_{validate}}) {
                 $$_{validate} = $patterns{$$_{validate}};
@@ -84,39 +102,41 @@ sub build {
         }
     }
     
-##     # so we don't get all fields required
-##     foreach (@{ $self->{form_spec}{fields} }) {
-##         delete $$_{validate} unless $$_{validate};
-##     }
-
     # expand groups
-    my %groups = %{ $self->{form_spec}{groups} };
-    foreach (grep { $$_[0] eq 'group' } @{ $self->{form_spec}{lines} }) {
-        $$_[1]{group} =~ s/^\%//;       # strip leading % from group var name
-        
-        if (exists $groups{$$_[1]{group}}) {
-            my @fields; # fields in the group
-            push @fields, { %$_ } foreach @{ $groups{$$_[1]{group}} };
-            for my $field (@fields) {
-                $$field{label} ||= ucfirst $$field{name};
-                $$field{name} = "$$_[1]{name}_$$field{name}";                
+    my %groups = %{ $self->{form_spec}{groups} || {} };
+    
+    for my $section (@{ $self->{form_spec}{sections} || [] }) {
+##         foreach (grep { $$_[0] eq 'group' } @{ $self->{form_spec}{lines} || [] }) {
+        foreach (grep { $$_[0] eq 'group' } @{ $$section{lines} }) {
+            $$_[1]{group} =~ s/^\%//;       # strip leading % from group var name
+            
+            if (exists $groups{$$_[1]{group}}) {
+                my @fields; # fields in the group
+                push @fields, { %$_ } foreach @{ $groups{$$_[1]{group}} };
+                for my $field (@fields) {
+                    $$field{label} ||= ucfirst $$field{name};
+                    $$field{name} = "$$_[1]{name}_$$field{name}";                
+                }
+                $_ = [ 'group', { label => $$_[1]{label} || ucfirst(join(' ',split('_',$$_[1]{name}))), group => \@fields } ];
             }
-            $_ = [ 'group', { label => $$_[1]{label} || ucfirst(join(' ',split('_',$$_[1]{name}))), group => \@fields } ];
         }
     }
     
     $self->{form_spec}{fields} = [];
-    for my $line (@{ $self->{form_spec}{lines} }) {
-        if ($$line[0] eq 'group') {
-            push @{ $self->{form_spec}{fields} }, $_ foreach @{ $$line[1]{group} };
-        } elsif ($$line[0] eq 'field') {
-            push @{ $self->{form_spec}{fields} }, $$line[1];
+    
+    for my $section (@{ $self->{form_spec}{sections} || [] }) {
+        #for my $line (@{ $self->{form_spec}{lines} || [] }) {
+        for my $line (@{ $$section{lines} }) {
+            if ($$line[0] eq 'group') {
+                push @{ $self->{form_spec}{fields} }, $_ foreach @{ $$line[1]{group} };
+            } elsif ($$line[0] eq 'field') {
+                push @{ $self->{form_spec}{fields} }, $$line[1];
+            }
         }
     }
     
-    
     # substitute in list names
-    my %lists = %{ $self->{form_spec}{lists} };
+    my %lists = %{ $self->{form_spec}{lists} || {} };
     foreach (@{ $self->{form_spec}{fields} }) {
         next unless $$_{list};
         
@@ -136,7 +156,14 @@ sub build {
         }
     } continue {
         delete $$_{list};
-    }    
+    }
+    
+    # special case single-value checkboxes
+    foreach (grep { $$_{type} && $$_{type} eq 'checkbox' } @{ $self->{form_spec}{fields} }) {
+        unless ($$_{options}) {
+            $$_{options} = [ { $$_{name} => $$_{label} || ucfirst join(' ',split(/_/,$$_{name})) } ];
+        }
+    }
     
     # TODO: configurable threshold for this
     foreach (@{ $self->{form_spec}{fields} }) {
@@ -153,9 +180,10 @@ sub build {
     # param, not whether it is true or defined
     $$_{required} or delete $$_{required} foreach @{ $self->{form_spec}{fields} };
 
-    
+    # need to explicity set the fields so that simple text fields get picked up
     $self->{form} = CGI::FormBuilder->new(
         %DEFAULT_OPTIONS,
+        fields   => [ map { $$_{name} } @{ $self->{form_spec}{fields} } ],
         required => [ map { $$_{name} } grep { $$_{required} } @{ $self->{form_spec}{fields} } ],
         title => $self->{form_spec}{title},
         text  => $self->{form_spec}{description},
@@ -163,12 +191,11 @@ sub build {
             type => 'Text',
             engine => {
                 TYPE       => 'STRING',
-                SOURCE     => $form_only ? $self->_form_template : $self->_template,
+                SOURCE     => $form_only ? $self->_form_template : $self->_template($css),
                 DELIMITERS => [ qw(<% %>) ],
             },
             data => {
-                lines       => $self->{form_spec}{lines},
-                headings    => $self->{form_spec}{headings},
+                sections    => $self->{form_spec}{sections},
                 author      => $self->{form_spec}{author},
                 description => $self->{form_spec}{description},
             },
@@ -215,29 +242,25 @@ sub write_module {
     # don't dump $VARn names
     $Data::Dumper::Terse = 1;
     
-    my $title       = $self->{form_spec}{title} || '';
-    my $author      = $self->{form_spec}{author} || '';
-    my $description = $self->{form_spec}{description} || '';
-    
-    my $headings    = Data::Dumper->Dump([$self->{form_spec}{headings}],['headings']);
-    my $lines       = Data::Dumper->Dump([$self->{form_spec}{lines}],['lines']);
-    my $fields      = Data::Dumper->Dump([ [ map { $$_{name} } @{ $self->{form_spec}{fields} } ] ],['fields']);
+    my $css;
+    $css = $self->{build_options}{css} || $DEFAULT_CSS;
+    $css .= $self->{build_options}{extra_css} if $self->{build_options}{extra_css};
     
     my %options = (
         %DEFAULT_OPTIONS,
         title => $self->{form_spec}{title},
         text  => $self->{form_spec}{description},
+        fields   => [ map { $$_{name} } @{ $self->{form_spec}{fields} } ],
         required => [ map { $$_{name} } grep { $$_{required} } @{ $self->{form_spec}{fields} } ],
         template => {
             type => 'Text',
             engine => {
                 TYPE       => 'STRING',
-                SOURCE     => $self->{build_options}{form_only} ? $self->_form_template : $self->_template,
+                SOURCE     => $self->{build_options}{form_only} ? $self->_form_template : $self->_template($css),
                 DELIMITERS => [ qw(<% %>) ],
             },
             data => {
-                lines       => $self->{form_spec}{lines},
-                headings    => $self->{form_spec}{headings},
+                sections    => $self->{form_spec}{sections},
                 author      => $self->{form_spec}{author},
                 description => $self->{form_spec}{description},
             },
@@ -247,7 +270,8 @@ sub write_module {
     
     my $source = $options{form_only} ? $self->_form_template : $self->_template;
     
-    delete $options{form_only};
+    # remove our custom options
+    delete $options{$_} foreach qw(form_only css extra_css);
     
     my $form_options = keys %options > 0 ? Data::Dumper->Dump([\%options],['*options']) : '';
     
@@ -313,45 +337,54 @@ q[<% $description ? qq[<p id="description">$description</p>] : '' %>
     $OUT = join("\n", map { $$_{field} } grep { $$_{type} eq 'hidden' } @fields);
 %>
 
-<table>
-
-<% TABLE_LINE: for my $line (@lines) {
-
-    if ($$line[0] eq 'head') {
-        $OUT .= qq[  <tr><th class="sectionhead" colspan="2"><h2>$$line[1]</h2></th></tr>\n]
-    } elsif ($$line[0] eq 'field') {
-        #TODO: we only need the field names, not the full field spec in the lines strucutre
-        local $_ = $field{$$line[1]{name}};
-        # skip hidden fields in the table
-        next TABLE_LINE if $$_{type} eq 'hidden';
-        
-        $OUT .= $$_{invalid} ? qq[  <tr class="invalid">] : qq[  <tr>];
-        $OUT .= '<th class="label">' . ($$_{required} ? qq[<strong class="required">$$_{label}:</strong>] : "$$_{label}:") . '</th>';
-        if ($$_{invalid}) {
-            $OUT .= qq[<td>$$_{field} $$_{comment} Missing or invalid value.</td></tr>\n];
-        } else {
-            $OUT .= qq[<td>$$_{field} $$_{comment}</td></tr>\n];
+<%
+    SECTION: while (my $section = shift @sections) {
+        $OUT .= qq[<table id="] . ($$section{id} || '_default') . qq[">\n];
+        $OUT .= qq[  <caption><h2 class="sectionhead">$$section{head}</h2></caption>] if $$section{head};
+        TABLE_LINE: for my $line (@{ $$section{lines} }) {
+            if ($$line[0] eq 'head') {
+                $OUT .= qq[  <tr><th class="subhead" colspan="2"><h3>$$line[1]</h3></th></tr>\n]
+            } elsif ($$line[0] eq 'field') {
+                #TODO: we only need the field names, not the full field spec in the lines strucutre
+                local $_ = $field{$$line[1]{name}};
+                # skip hidden fields in the table
+                next TABLE_LINE if $$_{type} eq 'hidden';
+                
+                $OUT .= $$_{invalid} ? qq[  <tr class="invalid">] : qq[  <tr>];
+                
+                # special case single value checkboxes
+                if ($$_{type} eq 'checkbox' && @{ $$_{options} } == 1) {
+                    $OUT .= qq[<th></th>];
+                } else {
+                    $OUT .= '<th class="label">' . ($$_{required} ? qq[<strong class="required">$$_{label}:</strong>] : "$$_{label}:") . '</th>';
+                }
+                if ($$_{invalid}) {
+                    $OUT .= qq[<td>$$_{field} $$_{comment} Missing or invalid value.</td>];
+                } else {
+                    $OUT .= qq[<td>$$_{field} $$_{comment}</td>];
+                }
+                $OUT .= qq[</tr>\n];
+                
+            } elsif ($$line[0] eq 'group') {
+                my @field_names = map { $$_{name} } @{ $$line[1]{group} };
+                my @group_fields = map { $field{$_} } @field_names;
+                $OUT .= (grep { $$_{invalid} } @group_fields) ? qq[  <tr class="invalid">\n] : qq[  <tr>\n];
+                
+                $OUT .= '    <th class="label">';
+                $OUT .= (grep { $$_{required} } @group_fields) ? qq[<strong class="required">$$line[1]{label}:</strong>] : "$$line[1]{label}:";
+                $OUT .= qq[</th>\n];
+                
+                $OUT .= qq[    <td>];
+                $OUT .= join(' ', map { qq[<small class="sublabel">$$_{label}</small> $$_{field} $$_{comment}] } @group_fields);
+                $OUT .= qq[    </td>\n];
+                $OUT .= qq[  </tr>\n];
+            }   
         }
-    } elsif ($$line[0] eq 'group') {
-        my @field_names = map { $$_{name} } @{ $$line[1]{group} };
-        my @group_fields = map { $field{$_} } @field_names;
-        $OUT .= (grep { $$_{invalid} } @group_fields) ? qq[  <tr class="invalid">\n] : qq[  <tr>\n];
-        
-        #TODO: validated but not required fields
-        # in a form spec: //EMAIL?
-        
-        $OUT .= '    <th class="label">';
-        $OUT .= (grep { $$_{required} } @group_fields) ? qq[<strong class="required">$$line[1]{label}:</strong>] : "$$line[1]{label}:";
-        $OUT .= qq[</th>\n];
-        
-        $OUT .= qq[    <td>];
-        $OUT .= join(' ', map { qq[<small class="sublabel">$$_{label}</small> $$_{field} $$_{comment}] } @group_fields);
-        $OUT .= qq[    </td>\n];
-        $OUT .= qq[  </tr>\n];
-    }   
-    
-
-} %>
+        # close the table if there are sections remaining
+        # but leave the last one open for the submit button
+        $OUT .= qq[</table>\n] if @sections;
+    }
+%>
   <tr><th></th><td style="padding-top: 1em;"><% $submit %></td></tr>
 </table>
 <% $end %>
@@ -360,17 +393,12 @@ q[<% $description ? qq[<p id="description">$description</p>] : '' %>
 
 sub _template {
     my $self = shift;
+    my $css = shift || $DEFAULT_CSS;
 q[<html>
 <head>
   <title><% $title %><% $author ? ' - ' . ucfirst $author : '' %></title>
-  <style type="text/css">
-    #author, #footer { font-style: italic; }
-    th { text-align: left; }
-    th h2 { padding: .125em .5em; background: #eee; }
-    th.label { font-weight: normal; text-align: right; vertical-align: top; }
-    td ul { list-style: none; padding-left: 0; margin-left: 0; }
-    .sublabel { color: #999; }
-    .invalid { background: red; }
+  <style type="text/css">] .
+$css . q[
   </style>
 </head>
 <body>
@@ -463,6 +491,14 @@ Only uses the form portion of the template, and omits the surrounding html,
 title, author, and the standard footer. This does, however, include the
 description as specified with the C<!description> directive.
 
+=item C<css>, C<extra_css>
+
+These options allow you to tell Text::FormBuilder to use different
+CSS styles for the built in template. A value given a C<css> will
+replace the existing CSS, and a value given as C<extra_css> will be
+appended to the CSS. If both options are given, then the CSS that is
+used will be C<css> concatenated with C<extra_css>.
+
 =back
 
 All other options given to C<build> are passed on verbatim to the
@@ -492,8 +528,11 @@ dropdown lists or change input types at runtime.
     # or just print to STDOUT
     $parser->write;
 
-Calls C<render> on the FormBuilder form, and either writes the resulting HTML
-to a file, or to STDOUT if no filename is given.
+Calls C<render> on the FormBuilder form, and either writes the resulting
+HTML to a file, or to STDOUT if no filename is given.
+
+CSS Hint: to get multiple sections to all line up their fields, set a
+standard width for th.label
 
 =head2 write_module
 
@@ -562,6 +601,8 @@ form spec.
     
     !list name &{ CODE }
     
+    !section id heading
+    
     !head ...
 
 =head2 Directives
@@ -584,6 +625,11 @@ Defines a list for use in a C<radio>, C<checkbox>, or C<select> field.
 
 A brief description of the form. Suitable for special instructions on how to
 fill out the form.
+
+=item C<!section>
+
+Starts a new section. Each section has its own heading and id, which are
+written by default into spearate tables.
 
 =item C<!head>
 
@@ -695,10 +741,8 @@ supplying any options:
 
     moreinfo|I want to recieve more information:checkbox
 
-The one drawback to this is that the label to the checkbox will still appear
-to the left of the field. I am leaving it this way for now, but if enough
-people would like this to change, I may make single-option checkboxes a special
-case and put the label on the right.
+In this case, the label ``I want to recieve more information'' will be
+printed to the right of the checkbox.
 
 You can also supply a default value to the field. To get a default value of
 C<green> for the color field:
@@ -739,12 +783,12 @@ Any line beginning with a C<#> is considered a comment.
 
 =head1 TODO
 
-DWIM for single valued checkboxes (e.g. C<moreinfo|Send me more info:checkbox>)
+Allow for custom wrappers around the C<form_template>
 
 Use the custom message file format for messages in the built in template
 
-C<!section> directive to split up the table into multiple tables, each
-with their own id and (optional) heading
+Maybe use HTML::Template instead of Text::Template for the built in template
+(since CGI::FormBuilder users may be more likely to already have HTML::Template)
 
 Better examples in the docs (maybe a standalone or two as well)
 
@@ -756,8 +800,7 @@ Better tests!
 
 =head1 BUGS
 
-For now, checkboxes with a single value still display their labels on
-the left.
+I'm sure they're in there, I just haven't tripped over any new ones lately. :-)
 
 =head1 SEE ALSO
 
@@ -767,7 +810,7 @@ L<CGI::FormBuilder>
 
 Thanks to eszpee for pointing out some bugs in the default value parsing,
 as well as some suggestions for i18n/l10n and splitting up long forms into
-sections (that as of this release are still on the TODO list ;-).
+sections.
 
 =head1 AUTHOR
 
