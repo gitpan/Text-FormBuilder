@@ -3,9 +3,11 @@ package Text::FormBuilder;
 use strict;
 use warnings;
 
-use vars qw($VERSION);
+use base qw(Exporter);
+use vars qw($VERSION @EXPORT);
 
-$VERSION = '0.06';
+$VERSION = '0.07_02';
+@EXPORT = qw(create_form);
 
 use Carp;
 use Text::FormBuilder::Parser;
@@ -41,6 +43,37 @@ my %DEFAULT_MESSAGES = (
 
 my $DEFAULT_CHARSET = 'iso-8859-1';
 
+# options to clean up the code with Perl::Tidy
+my $TIDY_OPTIONS = '-nolq -ci=4 -ce';
+
+my $HTML_EXTS   = qr/\.html?$/;
+my $SCRIPT_EXTS = qr/\.(pl|cgi)$/;
+
+# superautomagical exported function
+sub create_form {
+    my ($source, $options, $destination) = @_;
+    my $parser = __PACKAGE__->parse($source);
+    $parser->build(%{ $options || {} });
+    if ($destination) {
+        if (ref $destination) {
+            croak "[Text::FormBuilder::create_form] Don't know what to do with a ref for $destination";
+            #TODO: what do ref dests mean?
+        } else {
+            # write webpage, script, or module
+            if ($destination =~ $HTML_EXTS) {
+                $parser->write($destination);
+            } elsif ($destination =~ $SCRIPT_EXTS) {
+                $parser->write_script($destination);
+            } else {
+                $parser->write_module($destination);
+            }
+        }
+    } else {
+        defined wantarray ? return $parser->form : $parser->write;
+    }
+}
+    
+
 sub new {
     my $invocant = shift;
     my $class = ref $invocant || $invocant;
@@ -52,11 +85,25 @@ sub new {
 
 sub parse {
     my ($self, $source) = @_;
-    if (ref $source && ref $source eq 'SCALAR') {
-        $self->parse_text($$source);
+    if (my $type = ref $source) {
+        if ($type eq 'SCALAR') {
+            $self->parse_text($$source);
+        } elsif ($type eq 'ARRAY') {
+            $self->parse_array(@$source);
+        } else {
+            croak "[Text::FormBuilder::parse] Unknown ref type $type passed as source";
+        }
     } else {
         $self->parse_file($source);
     }
+}
+
+sub parse_array {
+    my ($self, @lines) = @_;
+    # so it can be called as a class method
+    $self = $self->new unless ref $self;    
+    $self->parse_text(join("\n", @lines));    
+    return $self;
 }
 
 sub parse_file {
@@ -99,7 +146,7 @@ sub build {
     my $form_only = $options{form_only};
     
     # css, extra_css: allow for custom inline stylesheets
-    #   neat trick: extra_css => '@import(my_external_stylesheet.css);'
+    #   neat trick: css => '@import(my_external_stylesheet.css);'
     #   will let you use an external stylesheet
     #   CSS Hint: to get multiple sections to all line up their fields,
     #   set a standard width for th.label
@@ -108,6 +155,7 @@ sub build {
     $css .= $options{extra_css} if $options{extra_css};
     
     # messages
+    # code pulled (with modifications) from CGI::FormBuilder
     if ($options{messages}) {
         # if its a hashref, we'll just pass it on to CGI::FormBuilder
         
@@ -145,64 +193,77 @@ sub build {
     delete $options{$_} foreach qw(form_only css extra_css charset);
     
     # expand groups
-    my %groups = %{ $self->{form_spec}{groups} || {} };
-    for my $section (@{ $self->{form_spec}{sections} || [] }) {
-        foreach (grep { $$_[0] eq 'group' } @{ $$section{lines} }) {
-            $$_[1]{group} =~ s/^\%//;       # strip leading % from group var name
-            
-            if (exists $groups{$$_[1]{group}}) {
-                my @fields; # fields in the group
-                push @fields, { %$_ } foreach @{ $groups{$$_[1]{group}} };
-                for my $field (@fields) {
-                    $$field{label} ||= ucfirst $$field{name};
-                    $$field{name} = "$$_[1]{name}_$$field{name}";                
+    if (my %groups = %{ $self->{form_spec}{groups} || {} }) {
+        for my $section (@{ $self->{form_spec}{sections} || [] }) {
+            foreach (grep { $$_[0] eq 'group' } @{ $$section{lines} }) {
+                $$_[1]{group} =~ s/^\%//;       # strip leading % from group var name
+                
+                if (exists $groups{$$_[1]{group}}) {
+                    my @fields; # fields in the group
+                    push @fields, { %$_ } foreach @{ $groups{$$_[1]{group}} };
+                    for my $field (@fields) {
+                        $$field{label} ||= ucfirst $$field{name};
+                        $$field{name} = "$$_[1]{name}_$$field{name}";                
+                    }
+                    $_ = [ 'group', { label => $$_[1]{label} || ucfirst(join(' ',split('_',$$_[1]{name}))), group => \@fields } ];
                 }
-                $_ = [ 'group', { label => $$_[1]{label} || ucfirst(join(' ',split('_',$$_[1]{name}))), group => \@fields } ];
             }
         }
     }
     
     # the actual fields that are given to CGI::FormBuilder
+    # make copies so that when we trim down the sections
+    # we don't lose the form field information
     $self->{form_spec}{fields} = [];
     
     for my $section (@{ $self->{form_spec}{sections} || [] }) {
         for my $line (@{ $$section{lines} }) {
             if ($$line[0] eq 'group') {
-                push @{ $self->{form_spec}{fields} }, $_ foreach @{ $$line[1]{group} };
+                push @{ $self->{form_spec}{fields} }, { %{$_} } foreach @{ $$line[1]{group} };
             } elsif ($$line[0] eq 'field') {
-                push @{ $self->{form_spec}{fields} }, $$line[1];
+                push @{ $self->{form_spec}{fields} }, { %{$$line[1]} };
             }
         }
     }
     
-    # substitute in custom pattern definitions for field validation
-    if (my %patterns = %{ $self->{form_spec}{patterns} || {} }) {
-        foreach (@{ $self->{form_spec}{fields} }) {
-            if ($$_{validate} and exists $patterns{$$_{validate}}) {
+    # substitute in custom validation subs and pattern definitions for field validation
+    my %patterns = %{ $self->{form_spec}{patterns} || {} };
+    my %subs = %{ $self->{form_spec}{subs} || {} };
+    
+    foreach (@{ $self->{form_spec}{fields} }) {
+        if ($$_{validate}) {
+            if (exists $patterns{$$_{validate}}) {
                 $$_{validate} = $patterns{$$_{validate}};
+            # TODO: need the Data::Dumper code to work for this
+            # for now, we just warn that it doesn't work
+            } elsif (exists $subs{$$_{validate}}) {
+                warn "[Text::FormBuilder] validate coderefs don't work yet";
+                delete $$_{validate};
+##                 $$_{validate} = $subs{$$_{validate}};
             }
         }
     }
     
     # substitute in list names
-    my %lists = %{ $self->{form_spec}{lists} || {} };
-    foreach (@{ $self->{form_spec}{fields} }) {
-        next unless $$_{list};
-        
-        $$_{list} =~ s/^\@//;   # strip leading @ from list var name
-        
-        # a hack so we don't get screwy reference errors
-        if (exists $lists{$$_{list}}) {
-            my @list;
-            push @list, { %$_ } foreach @{ $lists{$$_{list}} };
-            $$_{options} = \@list;
-        } else {
-            # assume that the list name is a builtin 
-            # and let it fall through to CGI::FormBuilder
-            $$_{options} = $$_{list};
+    if (my %lists = %{ $self->{form_spec}{lists} || {} }) {
+        foreach (@{ $self->{form_spec}{fields} }) {
+            next unless $$_{list};
+            
+            $$_{list} =~ s/^\@//;   # strip leading @ from list var name
+            
+            # a hack so we don't get screwy reference errors
+            if (exists $lists{$$_{list}}) {
+                my @list;
+                push @list, { %$_ } foreach @{ $lists{$$_{list}} };
+                $$_{options} = \@list;
+            } else {
+                # assume that the list name is a builtin 
+                # and let it fall through to CGI::FormBuilder
+                $$_{options} = $$_{list};
+            }
+        } continue {
+            delete $$_{list};
         }
-    } continue {
-        delete $$_{list};
     }
     
     # special case single-value checkboxes
@@ -212,7 +273,7 @@ sub build {
         }
     }
     
-    # TODO: configurable threshold for this
+    # use the list for displaying checkbox groups
     foreach (@{ $self->{form_spec}{fields} }) {
         $$_{ulist} = 1 if ref $$_{options} and @{ $$_{options} } >= 3;
     }
@@ -228,6 +289,18 @@ sub build {
     # true or defined
     $$_{required} or delete $$_{required} foreach @{ $self->{form_spec}{fields} };
 
+    foreach (@{ $self->{form_spec}{sections} }) {
+        #for my $line (grep { $$_[0] eq 'field' } @{ $$_{lines} }) {
+        for my $line (@{ $$_{lines} }) {
+            if ($$line[0] eq 'field') {
+                $$line[1] = $$line[1]{name};
+##                 $_ eq 'name' or delete $$line[1]{$_} foreach keys %{ $$line[1] };
+##             } elsif ($$line[0] eq 'group') {
+##                 $$line[1] = [ map { $$_{name} } @{ $$line[1]{group} } ];
+            }
+        }
+    }
+    
     $self->{form} = CGI::FormBuilder->new(
         %DEFAULT_OPTIONS,
         # need to explicity set the fields so that simple text fields get picked up
@@ -274,10 +347,11 @@ sub write {
     }
 }
 
-sub write_module {
-    my ($self, $package, $use_tidy) = @_;
-
-    croak '[Text::FormBuilder::write_module] Expecting a package name' unless $package;
+# generates the core code to create the $form object
+# the generated code assumes that you have a CGI.pm
+# object named $q
+sub _form_code {
+    my $self = shift;
     
     # automatically call build if needed to
     # allow the new->parse->write shortcut
@@ -321,12 +395,45 @@ sub write_module {
     # remove our custom options
     delete $options{$_} foreach qw(form_only css extra_css);
     
-    my $form_options = keys %options > 0 ? Data::Dumper->Dump([\%options],['*options']) : '';
+    my %module_subs;
+    my $d = Data::Dumper->new([ \%options ], [ '*options' ]);
+    
+    use B::Deparse;
+    my $deparse = B::Deparse->new;
+##     
+##     #TODO: need a workaround/better solution since Data::Dumper doesn't like dumping coderefs
+##     foreach (@{ $self->{form_spec}{fields} }) {
+##         if (ref $$_{validate} eq 'CODE') {
+##             my $body = $deparse->coderef2text($$_{validate});
+##             #$d->Seen({ "*_validate_$$_{name}" => $$_{validate} });
+##             #$module_subs{$$_{name}} = "sub _validate_$$_{name} $$_{validate}";
+##         }
+##     }    
+##     my $sub_code = join("\n", each %module_subs);
+    
+    my $form_options = keys %options > 0 ? $d->Dump : '';
     
     my $field_setup = join(
         "\n", 
-        map { '$cgi_form->field' . Data::Dumper->Dump([$_],['*field']) . ';' } @{ $self->{form_spec}{fields} }
+        map { '$form->field' . Data::Dumper->Dump([$_],['*field']) . ';' } @{ $self->{form_spec}{fields} }
     );
+    
+    return <<END;
+my \$form = CGI::FormBuilder->new(
+    params => \$q,
+    $form_options
+);
+
+$field_setup
+END
+}
+
+sub write_module {
+    my ($self, $package, $use_tidy) = @_;
+
+    croak '[Text::FormBuilder::write_module] Expecting a package name' unless $package;
+    
+    my $form_code = $self->_form_code;
     
     my $module = <<END;
 package $package;
@@ -336,35 +443,66 @@ use warnings;
 use CGI::FormBuilder;
 
 sub get_form {
-    my \$cgi = shift;
-    my \$cgi_form = CGI::FormBuilder->new(
-        params => \$cgi,
-        $form_options
-    );
+    my \$q = shift;
+
+    $form_code
     
-    $field_setup
-    
-    return \$cgi_form;
+    return \$form;
 }
 
 # module return
 1;
 END
 
-    my $outfile = (split(/::/, $package))[-1] . '.pm';
+    _write_output_file($module, (split(/::/, $package))[-1] . '.pm', $use_tidy);
+    return $self;
+}
+
+sub write_script {
+    my ($self, $script_name, $use_tidy) = @_;
+
+    croak '[Text::FormBuilder::write_script] Expecting a script name' unless $script_name;
     
+    my $form_code = $self->_form_code;
+    
+    my $script = <<END;
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use CGI;
+use CGI::FormBuilder;
+
+my \$q = CGI->new;
+
+$form_code
+    
+unless (\$form->submitted && \$form->validate) {
+    print \$form->render;
+} else {
+    # do something with the entered data
+}
+END
+    
+    _write_output_file($script, $script_name, $use_tidy);   
+    return $self;
+}
+
+sub _write_output_file {
+    my ($source_code, $outfile, $use_tidy) = @_;
     if ($use_tidy) {
         # clean up the generated code, if asked
         eval 'use Perl::Tidy';
         die "Can't tidy the code: $@" if $@;
-        Perl::Tidy::perltidy(source => \$module, destination => $outfile, argv => '-nolq -ci=4');
+        Perl::Tidy::perltidy(source => \$source_code, destination => $outfile, argv => $TIDY_OPTIONS);
     } else {
         # otherwise, just print as is
-        open FORM, "> $outfile";
-        print FORM $module;
-        close FORM;
+        open OUT, "> $outfile" or die $!;
+        print OUT $source_code;
+        close OUT;
     }
 }
+
 
 sub form {
     my $self = shift;
@@ -396,8 +534,7 @@ q[
             if ($$line[0] eq 'head') {
                 $OUT .= qq[  <tr><th class="subhead" colspan="2"><h3>$$line[1]</h3></th></tr>\n]
             } elsif ($$line[0] eq 'field') {
-                #TODO: we only need the field names, not the full field spec in the lines strucutre
-                local $_ = $field{$$line[1]{name}};
+                local $_ = $field{$$line[1]};
                 
                 # skip hidden fields in the table
                 next TABLE_LINE if $$_{type} eq 'hidden';
@@ -421,8 +558,7 @@ q[
                 $OUT .= qq[</tr>\n];
                 
             } elsif ($$line[0] eq 'group') {
-                my @field_names = map { $$_{name} } @{ $$line[1]{group} };
-                my @group_fields = map { $field{$_} } @field_names;
+                my @group_fields = map { $field{$_} } map { $$_{name} } @{ $$line[1]{group} };
                 $OUT .= (grep { $$_{invalid} } @group_fields) ? qq[  <tr class="invalid">\n] : qq[  <tr>\n];
                 
                 $OUT .= '    <th class="label">';
@@ -431,6 +567,8 @@ q[
                 
                 $OUT .= qq[    <td>];
                 $OUT .= join(' ', map { qq[<small class="sublabel">$$_{label}</small> $$_{field} $$_{comment}] } @group_fields);
+                $OUT .= " $msg_invalid" if $$_{invalid};
+
                 $OUT .= qq[    </td>\n];
                 $OUT .= qq[  </tr>\n];
             }   
@@ -458,9 +596,7 @@ q[<html>
   <meta http-equiv="Content-Type" content="text/html; charset=] . $charset . q[" />
   <title><% $title %><% $author ? ' - ' . ucfirst $author : '' %></title>
   <style type="text/css">
-] .
-$css .
-q[  </style>
+] . $css . q[  </style>
   <% $jshead %>
 </head>
 <body>
@@ -484,6 +620,7 @@ sub _post_template {
 ];
 }
 
+# usage: $self->_template($css, $charset)
 sub _template {
     my $self = shift;
     return $self->_pre_template(@_) . $self->_form_template . $self->_post_template;
@@ -526,17 +663,46 @@ L<Parse::RecDescent>, L<CGI::FormBuilder>, L<Text::Template>
 
 =head1 DESCRIPTION
 
+This module is intended to extend the idea of making it easy to create
+web forms by allowing you to describe them with a simple langauge. These
+I<formspecs> are then passed through this module's parser and converted
+into L<CGI::FormBuilder> objects that you can easily use in your CGI
+scripts. In addition, this module can generate code for standalone modules
+which allow you to separate your form design from your script code.
+
+A simple formspec looks like this:
+
+    name//VALUE
+    email//EMAIL
+    langauge:select{English,Spanish,French,German}
+    moreinfo|Send me more information:checkbox
+    interests:checkbox{Perl,karate,bass guitar}
+
+This will produce a required C<name> test field, a required C<email> text
+field that must look like an email address, an optional select dropdown
+field C<langauge> with the choices English, Spanish, French, and German,
+an optional C<moreinfo> checkbox labeled ``Send me more information'', and
+finally a set of checkboxes named C<interests> with the choices Perl,
+karate, and bass guitar.
+
 =head2 new
+
+    my $parser = Text::FormBuilder->new;
 
 =head2 parse
 
-    # parse a file
+    # parse a file (regular scalar)
     $parser->parse($filename);
     
     # or pass a scalar ref for parse a literal string
     $parser->parse(\$string);
+    
+    # or an array ref to parse lines
+    $parser->parse(\@lines);
 
-Parse the file or string. Returns the parser object.
+Parse the file or string. Returns the parser object. This method,
+along with all of its C<parse_*> siblings, may be called as a class
+method to construct a new object.
 
 =head2 parse_file
 
@@ -550,6 +716,12 @@ Parse the file or string. Returns the parser object.
     $parser->parse_text($src);
 
 Parse the given C<$src> text. Returns the parser object.
+
+=head2 parse_array
+
+    $parser->parse_array(@lines);
+
+Concatenates and parses C<@lines>. Returns the parser object.
 
 =head2 build
 
@@ -572,6 +744,11 @@ CSS styles for the built in template. A value given a C<css> will
 replace the existing CSS, and a value given as C<extra_css> will be
 appended to the CSS. If both options are given, then the CSS that is
 used will be C<css> concatenated with C<extra_css>.
+
+If you want to use an external stylesheet, a quick way to get this is
+to set the C<css> parameter to import your file:
+
+    css => '@import(my_external_stylesheet.css);'
 
 =item C<messages>
 
@@ -666,6 +843,44 @@ will run L<Perl::Tidy> on the generated code before writing the module file.
     # write tidier code
     $parser->write_module('My::Form', 1);
 
+=head2 write_script
+
+    $parser->write_script($filename, $use_tidy);
+
+If you don't need the reuseability of a separate module, you can have
+Text::FormBuilder write the form object to a script for you, along with
+the simplest framework for using it, to which you can add your actual
+form processing code.
+
+The generated script looks like this:
+
+    #!/usr/bin/perl
+    use strict;
+    use warnings;
+    
+    use CGI;
+    use CGI::FormBuilder;
+    
+    my $q = CGI->new;
+    
+    my $form = CGI::FormBuilder->new(
+        params => $q,
+        # ... lots of other stuff to set up the form ...
+    );
+    
+    $form->field( name => 'month' );
+    $form->field( name => 'day' );
+    
+    unless ( $form->submitted && $form->validate ) {
+        print $form->render;
+    } else {
+        # do something with the entered data ...
+        # this is where your form processing code should go
+    }
+
+Like C<write_module>, you can optionally pass a true value as the second
+argument to have Perl::Tidy make the generated code look nicer.
+
 =head2 dump
 
 Uses L<YAML> to print out a human-readable representation of the parsed
@@ -696,15 +911,21 @@ Any of these can be overriden by the C<build> method:
         ...
     }
     
-    !pattern name /regular expression/
+    !pattern NAME /regular expression/
     
-    !list name {
+    !list NAME {
         option1[display string],
         option2[display string],
         ...
     }
     
-    !list name &{ CODE }
+    !list NAME &{ CODE }
+    
+    !group NAME {
+        field1
+        field2
+        ...
+    }
     
     !section id heading
     
@@ -721,6 +942,15 @@ Defines a validation pattern.
 =item C<!list>
 
 Defines a list for use in a C<radio>, C<checkbox>, or C<select> field.
+
+=item C<!group>
+
+Define a named group of fields that are displayed all on one line. Use with
+the C<!field> directive.
+
+=item C<!field>
+
+Include a named instance of a group defined with C<!group>.
 
 =item C<!title>
 
@@ -883,6 +1113,27 @@ change this, add a C<?> to the end of the validation type:
 In this case, you would get a C<contact> field that was optional, but if it
 were filled in, would have to validate as an C<EMAIL>.
 
+=head2 Field Groups
+
+You can define groups of fields using the C<!group> directive:
+
+    !group DATE {
+        month:select@MONTHS//INT
+        day[2]//INT
+        year[4]//INT
+    }
+
+You can then include instances of this group using the C<!field> directive:
+
+    !field %DATE birthday
+
+This will create a line in the form labeled ``Birthday'' which contains
+a month dropdown, and day and year text entry fields. The actual input field
+names are formed by concatenating the C<!field> name (e.g. C<birthday>) with
+the name of the subfield defined in the group (e.g. C<month>, C<day>, C<year>).
+Thus in this example, you would end up with the form fields C<birthday_month>,
+C<birthday_day>, and C<birthday_year>.
+
 =head2 Comments
 
     # comment ...
@@ -890,6 +1141,9 @@ were filled in, would have to validate as an C<EMAIL>.
 Any line beginning with a C<#> is considered a comment.
 
 =head1 TODO
+
+Allow renaming of the submit button; allow renaming and inclusion of a 
+reset button
 
 Allow for custom wrappers around the C<form_template>
 
@@ -904,7 +1158,14 @@ Better tests!
 
 =head1 BUGS
 
-I'm sure they're in there, I just haven't tripped over any new ones lately. :-)
+Creating two $parsers in the same script causes the second one to get the data
+from the first one.
+
+Get the fallback to CGI::FormBuilder builtin lists to work.
+
+I'm sure there are more in there, I just haven't tripped over any new ones lately. :-)
+
+Suggestions on how to improve the (currently tiny) test suite would be appreciated.
 
 =head1 SEE ALSO
 
