@@ -6,7 +6,7 @@ use warnings;
 use base qw(Exporter Class::ParseText::Base);
 use vars qw($VERSION @EXPORT);
 
-$VERSION = '0.08';
+$VERSION = '0.09_01';
 @EXPORT = qw(create_form);
 
 use Carp;
@@ -623,7 +623,10 @@ Text::FormBuilder - Create CGI::FormBuilder objects from simple text description
 
 =head1 REQUIRES
 
-L<Parse::RecDescent>, L<CGI::FormBuilder>, L<Text::Template>
+L<Parse::RecDescent>,
+L<CGI::FormBuilder>,
+L<Text::Template>,
+L<Class::Base>
 
 =head1 DESCRIPTION
 
@@ -978,10 +981,6 @@ special instructions at specific points in a long form.
 
 =back
 
-B<Known BUG:> If you include an odd number of C<'> or C<"> characters in a
-C<!description> or C<!note>, then that directive will mistakenly be skipped.
-This is a bug casued by me taking a shortcut in the parser C<:-/>
-
 =head2 Fields
 
 First, a note about multiword strings in the fields. Anywhere where it says
@@ -1042,6 +1041,14 @@ field name (but before the descriptive label):
     # for a multiline field, sets rows="4" and cols="30"
     description[4,30]:textarea
 
+To also set the C<maxlength> attribute for text fields, add a C<!> after
+the size:
+
+    # ensure that all titles entered are 40 characters or less
+    title[40!]:text
+
+This currently only works for single line text fields.
+    
 For the input types that can have options (C<select>, C<radio>, and
 C<checkbox>), here's how you do it:
 
@@ -1150,7 +1157,7 @@ Any line beginning with a C<#> is considered a comment.
 
 =head1 TODO
 
-Improve the commmand line tools
+Document the commmand line tool
 
 Allow renaming of the submit button; allow renaming and inclusion of a 
 reset button
@@ -1180,10 +1187,6 @@ C<!include> directive to include external formspec files
 Better tests!
 
 =head1 BUGS
-
-Having a single C<'> or C<"> in a C<!description> or C<!note> directive causes that
-directive to get skipped. This is an issue with the C<perl_codeblock> shortcut in
-Parse::RecDescent.
 
 Creating two $parsers in the same script causes the second one to get the data
 from the first one.
