@@ -1,11 +1,11 @@
 # http://module-build.sourceforge.net/META-spec.html
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         Text-FormBuilder
-version:      0.09
+version:      0.10
 version_from: lib/Text/FormBuilder.pm
 installdirs:  site
 requires:
-    CGI::FormBuilder:              3.001
+    CGI::FormBuilder:              3
     Class::Base:                   0.03
     Parse::RecDescent:             1.94
     Text::Template:                1.44

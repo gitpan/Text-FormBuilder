@@ -6,7 +6,7 @@ use warnings;
 use base qw(Exporter Class::ParseText::Base);
 use vars qw($VERSION @EXPORT);
 
-$VERSION = '0.09';
+$VERSION = '0.10';
 @EXPORT = qw(create_form);
 
 #$::RD_TRACE = 1;
@@ -14,6 +14,10 @@ $VERSION = '0.09';
 use Carp;
 use Text::FormBuilder::Parser;
 use CGI::FormBuilder;
+
+use Data::Dumper;
+$Data::Dumper::Terse = 1;           # don't dump $VARn names
+$Data::Dumper::Quotekeys = 0;       # don't quote simple string keys
 
 # the static default options passed to CGI::FormBuilder->new
 my %DEFAULT_OPTIONS = (
@@ -27,11 +31,13 @@ table { padding: 1em; }
 td table { padding: 0; } /* exclude the inner checkbox tables */
 #author, #footer { font-style: italic; }
 caption h2 { padding: .125em .5em; background: #ccc; text-align: left; }
+fieldset { margin: 1em 0; border: none; border-top: 2px solid #999; }
+legend { font-size: 1.25em; font-weight: bold; background: #ccc; padding: .125em .25em; border: 1px solid #666; }
 th { text-align: left; }
-th h3 { padding: .125em .5em; background: #eee; }
+th h2 { padding: .125em .5em; background: #eee; font-size: 1.25em; }
 th.label { font-weight: normal; text-align: right; vertical-align: top; }
 td ul { list-style: none; padding-left: 0; margin-left: 0; }
-.note { background: #eee; }
+.note { background: #eee; padding: .5em 1em; }
 .sublabel { color: #999; }
 .invalid { background: red; }
 END
@@ -99,8 +105,23 @@ sub build {
     #   will let you use an external stylesheet
     #   CSS Hint: to get multiple sections to all line up their fields,
     #   set a standard width for th.label
+    # external_css: scalar for a single external stylesheet; array for
+    #   multiple sheets; prepended to the beginning of the CSS as @import
+    #   statetments
     my $css;
     $css = $options{css} || $DEFAULT_CSS;
+    if ($options{external_css}) {
+        my $ref = ref $options{external_css};
+        if ($ref eq 'ARRAY') {
+            # loop over the list of external sheets
+            my $external_sheets = join("\n", map { "\@import url($_);" } @{ $options{external_css} });
+            $css = "$external_sheets\n$css";
+        } elsif ($ref) {
+            croak '[' . (caller(0))[3] . "] Don't know how to handle $ref reference as an argument to external_css";
+        } else {
+            $css = "\@import url($options{external_css});\n$css";
+        }
+    }
     $css .= $options{extra_css} if $options{extra_css};
     
     # messages
@@ -143,7 +164,7 @@ sub build {
     delete $options{$_} foreach qw(form_only css extra_css charset);
     
     # expand groups
-    if (my %groups = %{ $self->{form_spec}{groups} || {} }) {
+    if (my %groups = %{ $self->{form_spec}{groups} || {} }) {        
         for my $section (@{ $self->{form_spec}{sections} || [] }) {
             foreach (grep { $$_[0] eq 'group' } @{ $$section{lines} }) {
                 $$_[1]{group} =~ s/^\%//;       # strip leading % from group var name
@@ -155,7 +176,14 @@ sub build {
                         $$field{label} ||= ucfirst $$field{name};
                         $$field{name} = "$$_[1]{name}_$$field{name}";                
                     }
-                    $_ = [ 'group', { label => $$_[1]{label} || ucfirst(join(' ',split('_',$$_[1]{name}))), group => \@fields } ];
+                    $_ = [
+                        'group',
+                        {
+                            label => $$_[1]{label} || ucfirst(join(' ',split('_',$$_[1]{name}))),
+                            comment => $$_[1]{comment},
+                            group => \@fields,
+                        },
+                    ];
                 }
             }
         }
@@ -240,20 +268,15 @@ sub build {
     for my $field (@{ $self->{form_spec}{fields} }) {
         defined $$field{$_} or delete $$field{$_} foreach keys %{ $field };
         
-        unless ($FB_version >= '3.002') {
-            if ($$field{growable}) {
-                warn '[' . (caller(0))[3] . "] growable fields not supported by FB $FB_version (requires 3.002)";
-                delete $$field{growable};
+        unless ($FB_version >= '3.02') {
+            for (qw(growable other)) {
+                if ($$field{$_}) {
+                    warn '[' . (caller(0))[3] . "] '$_' fields not supported by FB $FB_version (requires 3.02)";
+                    delete $$field{$_};
+                }
             }
         }
-    }    
-    
-    # remove false $$_{required} params because this messes up things at
-    # the CGI::FormBuilder::field level; it seems to be marking required
-    # based on the existance of a 'required' param, not whether it is
-    # true or defined
-    # TODO: check if this is still needed
-    $$_{required} or delete $$_{required} foreach @{ $self->{form_spec}{fields} };
+    }
     
     # assign the field names to the sections
     foreach (@{ $self->{form_spec}{sections} }) {
@@ -264,7 +287,8 @@ sub build {
         }
     }
     
-    $self->{form} = CGI::FormBuilder->new(
+    # gather together all of the form options
+    $self->{form_options} = {
         %DEFAULT_OPTIONS,
         # need to explicity set the fields so that simple text fields get picked up
         fields   => [ map { $$_{name} } @{ $self->{form_spec}{fields} } ],
@@ -285,7 +309,12 @@ sub build {
             },
         },
         %options,
-    );
+    };
+    
+    # create the form object
+    $self->{form} = CGI::FormBuilder->new(%{ $self->{form_options} });
+    
+    # ...and set up its fields
     $self->{form}->field(%{ $_ }) foreach @{ $self->{form_spec}{fields} };
     
     # mark structures as built
@@ -310,73 +339,25 @@ sub write {
     }
 }
 
-# generates the core code to create the $form object
-# the generated code assumes that you have a CGI.pm
-# object named $q
-sub _form_code {
+# dump the form options as eval-able code
+sub _form_options_code {
     my $self = shift;
-    
-    # automatically call build if needed to
-    # allow the new->parse->write shortcut
-    $self->build unless $self->{built};
-    
-    # conditionally use Data::Dumper
-    eval 'use Data::Dumper;';
-    die "Can't write module; need Data::Dumper. $@" if $@;
-    
-    $Data::Dumper::Terse = 1;           # don't dump $VARn names
-    $Data::Dumper::Quotekeys = 0;       # don't quote simple string keys
-    
-    my $css;
-    $css = $self->{build_options}{css} || $DEFAULT_CSS;
-    $css .= $self->{build_options}{extra_css} if $self->{build_options}{extra_css};
-    
-    my %options = (
-        %DEFAULT_OPTIONS,
-        title => $self->{form_spec}{title},
-        text  => $self->{form_spec}{description},
-        fields   => [ map { $$_{name} } @{ $self->{form_spec}{fields} } ],
-        required => [ map { $$_{name} } grep { $$_{required} } @{ $self->{form_spec}{fields} } ],
-        template => {
-            type => 'Text',
-            engine => {
-                TYPE       => 'STRING',
-                SOURCE     => $self->{build_options}{form_only} ? 
-                                $self->_form_template : 
-                                $self->_template($css, $self->{build_options}{charset}),
-                DELIMITERS => [ qw(<% %>) ],
-            },
-            data => {
-                sections    => $self->{form_spec}{sections},
-                author      => $self->{form_spec}{author},
-                description => $self->{form_spec}{description},
-            },
-        }, 
-        %{ $self->{build_options} },
-    );
-    
-    # remove our custom options
-    delete $options{$_} foreach qw(form_only css extra_css);
-    
-    my %module_subs;
-    my $d = Data::Dumper->new([ \%options ], [ '*options' ]);
-    
-    my $form_options = keys %options > 0 ? $d->Dump : '';
-    
-    my $field_setup = join(
-        "\n", 
-        map { '$form->field' . Data::Dumper->Dump([$_],['*field']) . ';' } @{ $self->{form_spec}{fields} }
-    );
-    
-    return <<END;
-my \$form = CGI::FormBuilder->new(
-    params => \$q,
-    $form_options
-);
-
-$field_setup
-END
+    my $d = Data::Dumper->new([ $self->{form_options} ], [ '*options' ]);
+    return keys %{ $self->{form_options} } > 0 ? $d->Dump : '';    
 }
+# dump the field setup subs as eval-able code
+# pass in the variable name of the form object
+# (defaults to '$form')
+# TODO: revise this code to use the new 'fieldopts'
+# option to the FB constructor (requires FB 3.02)
+sub _field_setup_code {
+    my $self = shift;
+    my $object_name = shift || '$form';
+    return join(
+        "\n", 
+        map { $object_name . '->field' . Data::Dumper->Dump([$_],['*field']) . ';' } @{ $self->{form_spec}{fields} }
+    );
+}    
 
 sub write_module {
     my ($self, $package, $use_tidy) = @_;
@@ -387,9 +368,12 @@ sub write_module {
     $package =~ s/\.pm$//;
 ##     warn  "[Text::FromBuilder::write_module] Removed extra '.pm' from package name\n" if $package =~ s/\.pm$//;
     
-    my $form_code = $self->_form_code;
+    my $form_options = $self->_form_options_code;
+    my $field_setup = $self->_field_setup_code('$self');
     
-    my $module = <<END;
+    # old style of module
+    # TODO: how to keep this (as deprecated method)
+    my $old_module = <<END;
 package $package;
 use strict;
 use warnings;
@@ -399,15 +383,46 @@ use CGI::FormBuilder;
 sub get_form {
     my \$q = shift;
 
-    $form_code
+    my \$self = CGI::FormBuilder->new(
+        $form_options,
+        \@_,
+    );
     
-    return \$form;
+    $field_setup
+    
+    return \$self;
 }
 
 # module return
 1;
 END
 
+    # new style of module
+    my $module = <<END;
+package $package;
+use strict;
+use warnings;
+
+use base qw(CGI::FormBuilder);
+
+sub new {
+    my \$invocant = shift;
+    my \$class = ref \$invocant || \$invocant;
+    
+    my \$self = CGI::FormBuilder->new(
+        $form_options,
+        \@_,
+    );
+    
+    $field_setup
+    
+    # re-bless into this class
+    bless \$self, \$class;
+}
+
+# module return
+1;
+END
     _write_output_file($module, (split(/::/, $package))[-1] . '.pm', $use_tidy);
     return $self;
 }
@@ -417,19 +432,21 @@ sub write_script {
 
     croak '[' . (caller(0))[3] . '] Expecting a script name' unless $script_name;
     
-    my $form_code = $self->_form_code;
-    
+    my $form_options = $self->_form_options_code;
+    my $field_setup = $self->_field_setup_code('$form');
+
     my $script = <<END;
 #!/usr/bin/perl
 use strict;
 use warnings;
 
-use CGI;
 use CGI::FormBuilder;
 
-my \$q = CGI->new;
+my \$form = CGI::FormBuilder->new(
+    $form_options
+);
 
-$form_code
+$field_setup
     
 unless (\$form->submitted && \$form->validate) {
     print \$form->render;
@@ -489,11 +506,13 @@ sub _form_template {
 q[
 <%
     SECTION: while (my $section = shift @sections) {
+        $OUT .= qq[<fieldset>\n];
+        $OUT .= qq[  <legend>$$section{head}</legend>] if $$section{head};
         $OUT .= qq[<table id="] . ($$section{id} || '_default') . qq[">\n];
-        $OUT .= qq[  <caption><h2 class="sectionhead">$$section{head}</h2></caption>] if $$section{head};
+        #$OUT .= qq[  <caption><h2 class="sectionhead">$$section{head}</h2></caption>] if $$section{head};
         TABLE_LINE: for my $line (@{ $$section{lines} }) {
             if ($$line[0] eq 'head') {
-                $OUT .= qq[  <tr><th class="subhead" colspan="2"><h3>$$line[1]</h3></th></tr>\n]
+                $OUT .= qq[  <tr><th class="subhead" colspan="2"><h2>$$line[1]</h2></th></tr>\n]
             } elsif ($$line[0] eq 'note') {
                 $OUT .= qq[  <tr><td class="note" colspan="2">$$line[1]</td></tr>\n]
             } elsif ($$line[0] eq 'field') {
@@ -508,14 +527,14 @@ q[
                 if ($$_{type} eq 'checkbox' && @{ $$_{options} } == 1) {
                     $OUT .= qq[<th></th>];
                 } else {
-                    $OUT .= '<th class="label">' . ($$_{required} ? qq[<strong class="required">$$_{label}:</strong>] : "$$_{label}:") . '</th>';
+                    $OUT .= '<th class="label">' . ($$_{required} ? qq[<strong class="required">$$_{label}</strong>] : "$$_{label}") . '</th>';
                 }
                 
                 # mark invalid fields
                 if ($$_{invalid}) {
-                    $OUT .= "<td>$$_{field} $$_{comment} ] . $msg_invalid . q[</td>";
+                    $OUT .= qq[<td>$$_{field} <span class="comment">$$_{comment}</span> ] . $msg_invalid . q[</td>];
                 } else {
-                    $OUT .= qq[<td>$$_{field} $$_{comment}</td>];
+                    $OUT .= qq[<td>$$_{field} <span class="comment">$$_{comment}</span></td>];
                 }
                 
                 $OUT .= qq[</tr>\n];
@@ -525,7 +544,7 @@ q[
                 $OUT .= (grep { $$_{invalid} } @group_fields) ? qq[  <tr class="invalid">\n] : qq[  <tr>\n];
                 
                 $OUT .= '    <th class="label">';
-                $OUT .= (grep { $$_{required} } @group_fields) ? qq[<strong class="required">$$line[1]{label}:</strong>] : "$$line[1]{label}:";
+                $OUT .= (grep { $$_{required} } @group_fields) ? qq[<strong class="required">$$line[1]{label}</strong>] : "$$line[1]{label}";
                 $OUT .= qq[</th>\n];
                 
                 $OUT .= qq[    <td><span class="fieldgroup">];
@@ -533,17 +552,21 @@ q[
                 #TODO: allow comments on field groups
                 $OUT .= " ] . $msg_invalid . q[" if grep { $$_{invalid} } @group_fields;
                 
-                $OUT .= qq[    </span></td>\n];
+                $OUT .= qq[ <span class="comment">$$line[1]{comment}</span></span></td>\n];
                 $OUT .= qq[  </tr>\n];
             }   
         }
         # close the table if there are sections remaining
         # but leave the last one open for the submit button
-        $OUT .= qq[</table>\n] if @sections;
+        if (@sections) {
+            $OUT .= qq[</table>\n];
+            $OUT .= qq[</fieldset>\n];
+        }
     }
 %>
   <tr><th></th><td style="padding-top: 1em;"><% $submit %></td></tr>
 </table>
+</fieldset>
 <% $end %>
 ];
 }
@@ -719,6 +742,20 @@ to set the C<css> parameter to import your file:
 
     css => '@import(my_external_stylesheet.css);'
 
+=item C<external_css>
+
+If you want to use multiple external stylesheets, or an external stylesheet
+in conojunction with the default styles, use the C<external_css> option:
+
+    # single external sheet
+    external_css => 'my_styles.css'
+    
+    # mutliple sheets
+    external_css => [
+        'my_style_A.css',
+        'my_style_B.css',
+    ]
+
 =item C<messages>
 
 This works the same way as the C<messages> parameter to 
@@ -774,14 +811,17 @@ HTML to a file, or to STDOUT if no filename is given.
 
 =head2 write_module
 
+I<B<Note:> The code output from the C<write_*> methods may be in flux for
+the next few versions, as I coordinate with the B<FormBuilder> project.>
+
     $parser->write_module($package, $use_tidy);
 
 Takes a package name, and writes out a new module that can be used by your
 CGI script to render the form. This way, you only need CGI::FormBuilder on
 your server, and you don't have to parse the form spec each time you want 
-to display your form. The generated module has one function (not exported)
-called C<get_form>, that takes a CGI object as its only argument, and returns
-a CGI::FormBuilder object.
+to display your form. The generated module is a subclass of L<CGI::FormBuilder>,
+that will pass along any constructor arguments to FormBuilder, and set up
+the fields for you.
 
 First, you parse the formspec and write the module, which you can do as a one-liner:
 
@@ -796,7 +836,7 @@ And then, in your CGI script, use the new module:
     use My::Form;
     
     my $q = CGI->new;
-    my $form = My::Form::get_form($q);
+    my $form = My::Form->new;
     
     # do the standard CGI::FormBuilder stuff
     if ($form->submitted && $form->validate) {
@@ -827,24 +867,19 @@ The generated script looks like this:
     use strict;
     use warnings;
     
-    use CGI;
     use CGI::FormBuilder;
     
-    my $q = CGI->new;
-    
     my $form = CGI::FormBuilder->new(
-        params => $q,
-        # ... lots of other stuff to set up the form ...
+        # lots of stuff here...
     );
     
-    $form->field( name => 'month' );
-    $form->field( name => 'day' );
-    
-    unless ( $form->submitted && $form->validate ) {
+    # ...and your field setup subs are here
+    $form->field(name => '...');
+        
+    unless ($form->submitted && $form->validate) {
         print $form->render;
     } else {
-        # do something with the entered data ...
-        # this is where your form processing code should go
+        # do something with the entered data
     }
 
 Like C<write_module>, you can optionally pass a true value as the second
@@ -885,7 +920,6 @@ object-oriented interface, since that gives you more control over things.
 These are the default settings that are passed to C<< CGI::FormBuilder->new >>:
 
     method => 'GET'
-    javascript => 0
     keepextras => 1
 
 Any of these can be overriden by the C<build> method:
@@ -895,6 +929,8 @@ Any of these can be overriden by the C<build> method:
 
 =head1 LANGUAGE
 
+    # name field_size growable label hint type other default option_list validate
+    
     field_name[size]|descriptive label[hint]:type=default{option1[display string],...}//validate
     
     !title ...
@@ -912,8 +948,6 @@ Any of these can be overriden by the C<build> method:
         option2[display string],
         ...
     }
-    
-    !list NAME &{ CODE }
     
     !group NAME {
         field1
@@ -948,7 +982,7 @@ the C<!field> directive.
 
 =item C<!field>
 
-Include a named instance of a group defined with C<!group>.
+B<DEPRECATED> Include a named instance of a group defined with C<!group>.
 
 =item C<!title>
 
@@ -981,7 +1015,7 @@ special instructions at specific points in a long form.
 
 =back
 
-=head2 Fields
+=head2 Strings
 
 First, a note about multiword strings in the fields. Anywhere where it says
 that you may use a multiword string, this means that you can do one of two
@@ -1000,13 +1034,19 @@ a backslash:
 
     field_3|'\'Official\' title'
 
-Now, back to the beginning. Form fields are each described on a single line.
-The simplest field is just a name (which cannot contain any whitespace):
+Quoted strings are also how you can set the label for a field to be blank:
+
+    unlabeled_field|''
+
+=head2 Fields
+
+Form fields are each described on a single line. The simplest field is
+just a name (which cannot contain any whitespace):
 
     color
 
 This yields a form with one text input field of the default size named `color'.
-The generated label for this field would be ``Color''. To add a longer or more\
+The generated label for this field would be ``Color''. To add a longer or more
 descriptive label, use:
 
     color|Favorite color
@@ -1057,6 +1097,17 @@ Growable fields also require JavaScript to function correctly.
 
     # you can have as many people as you like
     person*:text
+
+To create a C<radio> or C<select> field that includes an "other" option,
+append the string C<+other> to the field type:
+
+    position:select+other
+
+Or, to let FormBuilder decide whether to use radio buttons or a dropdown:
+
+    position+other
+
+Like growable fields, 'other' fields require FormBuilder 3.02 or higher.
 
 For the input types that can have options (C<select>, C<radio>, and
 C<checkbox>), here's how you do it:
@@ -1145,42 +1196,60 @@ Thus in this example, you would end up with the form fields C<birthday_month>,
 C<birthday_day>, and C<birthday_year>.
 
 You can also use groups in normal field lines:
-    
+
     birthday|Your birthday:DATE
 
 The only (currently) supported pieces of a fieldspec that may be used with a
-group in this notation are name and label.
+group in this notation are name, label, and hint.
 
 =head2 Comments
 
     # comment ...
 
-Any line beginning with a C<#> is considered a comment.
+Any line beginning with a C<#> is considered a comment. Comments can also appear
+after any field line. They I<cannot> appear between items in a C<!list>, or on
+the same line as any of the directives.
 
 =head1 TODO
 
-Document the commmand line tool
+=head2 Documentation/Tests
 
 Document use of the parser as a standalone module
+
+Make sure that the docs match the generated code.
+
+Better tests!
+
+=head2 Language/Parser
+
+Make sure that multiple runs of the parser don't share data.
 
 Allow renaming of the submit button; allow renaming and inclusion of a 
 reset button
 
-Allow comments on group fields (rendered after the all the fields)
+Set FB constructor options directly in the formspec (via a C<!fb> or similar
+directive). The major issue here would be what format to use to allow for
+array/hash refs.
 
 Pieces that wouldn't make sense in a group field: size, row/col, options,
 validate. These should cause C<build> to emit a warning before ignoring them.
 
-Make the generated modules into subclasses of CGI::FormBuilder
+C<!include> directive to include external formspec files
+
+=head2 Code generation/Templates
+
+Expose some of the currently private functions to be able to get the generated
+code text directly, without printing.
+
+Revise the generated form constructing code to use the C<fieldopts>
+option to C<< FB->new >>; will require FB 3.02 to run.
+
+Better integration with L<CGI::FormBuilder>'s templating system
 
 Allow for custom wrappers around the C<form_template>
 
 Maybe use HTML::Template instead of Text::Template for the built in template
 (since CGI::FormBuilder users may be more likely to already have HTML::Template)
-
-C<!include> directive to include external formspec files
-
-Better tests!
 
 =head1 BUGS
 
