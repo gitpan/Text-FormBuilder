@@ -7703,7 +7703,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::list_var
 	while (!$_matched && !$commit)
 	{
 		
-		Parse::RecDescent::_trace(q{Trying production: [/@[A-Z_]+/]},
+		Parse::RecDescent::_trace(q{Trying production: [/@[A-Z_]*/]},
 					  Parse::RecDescent::_tracefirst($_[1]),
 					  q{list_var},
 					  $tracelevel)
@@ -7716,7 +7716,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::list_var
 		my $repcount = 0;
 
 
-		Parse::RecDescent::_trace(q{Trying terminal: [/@[A-Z_]+/]}, Parse::RecDescent::_tracefirst($text),
+		Parse::RecDescent::_trace(q{Trying terminal: [/@[A-Z_]*/]}, Parse::RecDescent::_tracefirst($text),
 					  q{list_var},
 					  $tracelevel)
 						if defined $::RD_TRACE;
@@ -7724,7 +7724,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::list_var
 		$expectation->is(q{})->at($text);
 		
 
-		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:@[A-Z_]+)//)
+		unless ($text =~ s/\A($skip)/$lastsep=$1 and ""/e and   $text =~ s/\A(?:@[A-Z_]*)//)
 		{
 			
 			$expectation->failed();
@@ -7764,7 +7764,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::list_var
 		
 
 
-		Parse::RecDescent::_trace(q{>>Matched production: [/@[A-Z_]+/]<<},
+		Parse::RecDescent::_trace(q{>>Matched production: [/@[A-Z_]*/]<<},
 					  Parse::RecDescent::_tracefirst($text),
 					  q{list_var},
 					  $tracelevel)
@@ -12419,9 +12419,9 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                            'actcount' => 1,
                                                                            'items' => [
                                                                                         bless( {
-                                                                                                 'pattern' => '@[A-Z_]+',
+                                                                                                 'pattern' => '@[A-Z_]*',
                                                                                                  'hashname' => '__PATTERN1__',
-                                                                                                 'description' => '/@[A-Z_]+/',
+                                                                                                 'description' => '/@[A-Z_]*/',
                                                                                                  'lookahead' => 0,
                                                                                                  'rdelim' => '/',
                                                                                                  'line' => 197,
