@@ -18,11 +18,13 @@
 	$type,
 	@options,
 	$required,
+	$multiple,
 	$list_var,
 	$size,
 	$maxlength,
 	$rows,
 	$cols,
+	@submit,
     );
     my $context = 'line';	# start in line context by default
     my %formspec;
@@ -37,7 +39,7 @@ form_spec:
     { 
 	%formspec = ();  # clear the old formspec data
     }
-    (list_def | description_def | group_def | note | line)(s)
+    (list_def | description_def | group_def | note | unknown_block_directive | line)(s)
     {
 	# grab the last section, if there is any
 	if (@lines) {
@@ -58,6 +60,11 @@ form_spec:
 	    subs     => \%subs,
 	    groups   => \%groups,
 	    sections => \@sections,
+	    ( @submit ? 
+		(submit => @submit == 1 ? $submit[0] : \@submit) :
+		()
+	    ),
+	    reset => $formspec{reset},
 	}
     }
 
@@ -105,7 +112,7 @@ bracket_block_content: /[^\[\]]+?/ | inner_bracket_block
 # field lines are the subset of lines that are allowed in a !group directive
 field_line: <skip:'[ \t]*'> ( field | comment | blank ) "\n"
 
-line: <skip:'[ \t]*'> ( title | author | pattern_def | section_head | heading | group_field | field_group | unknown_directive | field | comment | blank ) "\n"
+line: <skip:'[ \t]*'> ( title | author | pattern_def | section_head | heading | submit | reset | group_field | field_group | unknown_directive | field | comment | blank ) /\n+/
 
 title: '!title' /.*/
     {
@@ -145,6 +152,18 @@ section_head: '!section' identifier /.*/
 
 heading: '!head' /.*/    { push @lines, [ 'head', $item[2] ] }
 
+submit: '!submit' string(s /\s*,\s*/)
+    {
+	#warn scalar(@{ $item[2] }) . ' submit button(s)';
+	push @submit, @{ $item[2] };
+    }
+
+reset: '!reset' string
+    {
+	warn "[Text::FormBuilder] Reset button redefined at input text line $thisline\n" if defined $formspec{reset};
+	$formspec{reset} = $item{string};
+    }
+
 group_field: '!field' group_name name label(?)
     {
 	warn "WARNING line $thisline: The '!field' directive has been DEPRECATED. Use the 'name:GROUP' style instead.\n";
@@ -168,13 +187,14 @@ field_group: name label(?) hint(?) group_type comment(?)
 group_type: ':' var_name
 
 # this is the real heart of the thing
-field: name field_size(?) growable(?) label(?) hint(?) type(?) other(?) default(?) option_list(?) validate(?) comment(?)
+field: name field_size(?) growable(?) label(?) hint(?) type(?) multi(?) other(?) default(?) option_list(?) validate(?) comment(?)
     {
 	my $field = {
 	    name     => $item{name},
 	    growable => $item{'growable(?)'}[0],
 	    label    => $item{'label(?)'}[0],
 	    comment  => $item{'hint(?)'}[0],
+	    multiple => $item{'multi(?)'}[0],
 	    type     => $item{'type(?)'}[0],
 	    other    => $item{'other(?)'}[0],
 	    value    => $item{'default(?)'}[0],
@@ -199,6 +219,7 @@ field: name field_size(?) growable(?) label(?) hint(?) type(?) other(?) default(
 	
 	$type = undef;
 	$required = undef;
+	$multiple = undef;
 	$list_var = undef;
 	$size = undef;
 	$rows = undef;
@@ -235,6 +256,8 @@ type: ':' builtin_field
 
 builtin_field: /textarea|text|password|file|checkbox|radio|select|hidden|static/
 
+multi: '*' { 1 }
+
 other: '+' 'other' { 1 }
 
 default: '=' string { $item[2] }
@@ -242,11 +265,11 @@ default: '=' string { $item[2] }
 string: simple_multiword | quoted_string
 
 # for simple multiword values not involving punctuation
-simple_multiword: <skip:''> /\w[\w\t ]*/ { $item[2] }
+simple_multiword: /\w/ <skip:''> /[\w\t ]*/ { $item[1] . $item[3] }
 
 # my attempt at a single-quoted, non-interpolating string
 # where the backslash can escape literal single quotes
-quoted_string: <skip:''> "'" /(\\'|[^'])*/ "'"
+quoted_string: "'" <skip:''> /(\\'|[^'])*/ "'"
     { $item[3] =~ s/\\'/'/g; $item[3] }
 
 option_list: options | list_var
@@ -277,3 +300,6 @@ identifier: /\w+/
 # skip unknown directives with a warning
 unknown_directive: /\!\S*/ /.*/
     { warn "[Text::Formbuilder] Skipping unknown directive '$item[1]' at input text line $thisline\n"; }
+
+unknown_block_directive: /\!\S*/ var_name(?) block
+    { warn "[Text::Formbuilder] Skipping unknown block directive '$item[1]' at input text line $thisline\n"; }

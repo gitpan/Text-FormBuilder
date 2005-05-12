@@ -6,7 +6,7 @@ use warnings;
 use base qw(Exporter Class::ParseText::Base);
 use vars qw($VERSION @EXPORT);
 
-$VERSION = '0.10';
+$VERSION = '0.11';
 @EXPORT = qw(create_form);
 
 #$::RD_TRACE = 1;
@@ -35,7 +35,7 @@ fieldset { margin: 1em 0; border: none; border-top: 2px solid #999; }
 legend { font-size: 1.25em; font-weight: bold; background: #ccc; padding: .125em .25em; border: 1px solid #666; }
 th { text-align: left; }
 th h2 { padding: .125em .5em; background: #eee; font-size: 1.25em; }
-th.label { font-weight: normal; text-align: right; vertical-align: top; }
+.label { font-weight: normal; text-align: right; vertical-align: top; }
 td ul { list-style: none; padding-left: 0; margin-left: 0; }
 .note { background: #eee; padding: .5em 1em; }
 .sublabel { color: #999; }
@@ -46,7 +46,7 @@ END
 my %DEFAULT_MESSAGES = (
     text_author   => 'Created by %s',
     text_madewith => 'Made with %s version %s',
-    text_required => '(Required fields are marked in <strong>bold</strong>.)',
+    text_required => 'Fields that are <strong>highlighted</strong> are required.',
     text_invalid  => 'Missing or invalid value.',
 );
 
@@ -295,6 +295,10 @@ sub build {
         required => [ map { $$_{name} } grep { $$_{required} } @{ $self->{form_spec}{fields} } ],
         title => $self->{form_spec}{title},
         text  => $self->{form_spec}{description},
+        # use 'defined' so we are able to differentiate between 'submit = 0' (no submit button)
+        # and 'submit = undef' (use default submit button)
+        ( defined $self->{form_spec}{submit} ? (submit => $self->{form_spec}{submit}) : () ),
+        reset => $self->{form_spec}{reset},
         template => {
             type => 'Text',
             engine => {
@@ -303,6 +307,7 @@ sub build {
                 DELIMITERS => [ qw(<% %>) ],
             },
             data => {
+                #TODO: make FB aware of sections
                 sections    => $self->{form_spec}{sections},
                 author      => $self->{form_spec}{author},
                 description => $self->{form_spec}{description},
@@ -357,17 +362,19 @@ sub _field_setup_code {
         "\n", 
         map { $object_name . '->field' . Data::Dumper->Dump([$_],['*field']) . ';' } @{ $self->{form_spec}{fields} }
     );
-}    
+}
 
-sub write_module {
+sub as_module {
     my ($self, $package, $use_tidy) = @_;
 
     croak '[' . (caller(0))[3] . '] Expecting a package name' unless $package;
     
     # remove a trailing .pm
     $package =~ s/\.pm$//;
-##     warn  "[Text::FromBuilder::write_module] Removed extra '.pm' from package name\n" if $package =~ s/\.pm$//;
-    
+
+    # auto-build
+    $self->build unless $self->{built};
+
     my $form_options = $self->_form_options_code;
     my $field_setup = $self->_field_setup_code('$self');
     
@@ -423,14 +430,28 @@ sub new {
 # module return
 1;
 END
-    _write_output_file($module, (split(/::/, $package))[-1] . '.pm', $use_tidy);
+
+    $module = _tidy_code($module, $use_tidy) if $use_tidy;
+    
+    return $module;
+}
+
+sub write_module {
+    my ($self, $package, $use_tidy) = @_;
+    
+    my $module = $self->as_module($package, $use_tidy);
+    
+    my $outfile = (split(/::/, $package))[-1];
+    $outfile .= '.pm' unless $outfile =~ /\.pm$/;
+    _write_output_file($module, $outfile);
     return $self;
 }
 
-sub write_script {
-    my ($self, $script_name, $use_tidy) = @_;
-
-    croak '[' . (caller(0))[3] . '] Expecting a script name' unless $script_name;
+sub as_script {
+    my ($self, $use_tidy) = @_;
+    
+    # auto-build
+    $self->build unless $self->{built};
     
     my $form_options = $self->_form_options_code;
     my $field_setup = $self->_field_setup_code('$form');
@@ -454,31 +475,42 @@ unless (\$form->submitted && \$form->validate) {
     # do something with the entered data
 }
 END
+    $script = _tidy_code($script, $use_tidy) if $use_tidy;
     
-    _write_output_file($script, $script_name, $use_tidy);   
+    return $script;
+}
+    
+sub write_script {
+    my ($self, $script_name, $use_tidy) = @_;
+
+    croak '[' . (caller(0))[3] . '] Expecting a script name' unless $script_name;
+
+    my $script = $self->as_script($use_tidy);
+    
+    _write_output_file($script, $script_name);   
     return $self;
 }
 
+sub _tidy_code {
+    my ($source_code, $use_tidy) = @_;
+    eval 'use Perl::Tidy';
+    carp '[' . (caller(0))[3] . "] Can't tidy the code: $@" and return $source_code if $@;
+    
+    # use the options string only if it begins with '_'
+    my $options = ($use_tidy =~ /^-/) ? $use_tidy : undef;
+    
+    my $tidy_code;
+    Perl::Tidy::perltidy(source => \$source_code, destination => \$tidy_code, argv => $options || $TIDY_OPTIONS);
+    
+    return $tidy_code;
+}
+
+
 sub _write_output_file {
-    my ($source_code, $outfile, $use_tidy) = @_;
-    if ($use_tidy) {
-        # clean up the generated code, if asked
-        eval 'use Perl::Tidy';
-        unless ($@) {
-            Perl::Tidy::perltidy(source => \$source_code, destination => $outfile, argv => $TIDY_OPTIONS);
-        } else {
-            carp '[' . (caller(0))[3] . "] Can't tidy the code: $@" if $@;
-            # fallback to just writing it as-is
-            open OUT, "> $outfile" or die $!;
-            print OUT $source_code;
-            close OUT;
-        }
-    } else {
-        # otherwise, just print as is
-        open OUT, "> $outfile" or die $!;
-        print OUT $source_code;
-        close OUT;
-    }
+    my ($source_code, $outfile) = @_;    
+    open OUT, "> $outfile" or croak '[' . (caller(1))[3] . "] Can't open $outfile for writing: $!";
+    print OUT $source_code;
+    close OUT;
 }
 
 
@@ -525,14 +557,14 @@ q[
                 
                 # special case single value checkboxes
                 if ($$_{type} eq 'checkbox' && @{ $$_{options} } == 1) {
-                    $OUT .= qq[<th></th>];
+                    $OUT .= qq[<td></td>];
                 } else {
-                    $OUT .= '<th class="label">' . ($$_{required} ? qq[<strong class="required">$$_{label}</strong>] : "$$_{label}") . '</th>';
+                    $OUT .= '<td class="label">' . ($$_{required} ? qq[<strong class="required">$$_{label}</strong>] : "$$_{label}") . '</td>';
                 }
                 
                 # mark invalid fields
                 if ($$_{invalid}) {
-                    $OUT .= qq[<td>$$_{field} <span class="comment">$$_{comment}</span> ] . $msg_invalid . q[</td>];
+                    $OUT .= qq[<td>$$_{field} <span class="comment">$$_{comment}</span> $$_{error}</td>];
                 } else {
                     $OUT .= qq[<td>$$_{field} <span class="comment">$$_{comment}</span></td>];
                 }
@@ -543,15 +575,15 @@ q[
                 my @group_fields = map { $field{$_} } map { $$_{name} } @{ $$line[1]{group} };
                 $OUT .= (grep { $$_{invalid} } @group_fields) ? qq[  <tr class="invalid">\n] : qq[  <tr>\n];
                 
-                $OUT .= '    <th class="label">';
+                $OUT .= '    <td class="label">';
                 $OUT .= (grep { $$_{required} } @group_fields) ? qq[<strong class="required">$$line[1]{label}</strong>] : "$$line[1]{label}";
-                $OUT .= qq[</th>\n];
+                $OUT .= qq[</td>\n];
                 
                 $OUT .= qq[    <td><span class="fieldgroup">];
                 $OUT .= join(' ', map { qq[<small class="sublabel">$$_{label}</small> $$_{field} $$_{comment}] } @group_fields);
-                #TODO: allow comments on field groups
-                $OUT .= " ] . $msg_invalid . q[" if grep { $$_{invalid} } @group_fields;
-                
+                if (my @invalid = grep { $$_{invalid} } @group_fields) {
+                    $OUT .= ' ' . join('; ', map { $$_{error} } @invalid);
+                }                
                 $OUT .= qq[ <span class="comment">$$line[1]{comment}</span></span></td>\n];
                 $OUT .= qq[  </tr>\n];
             }   
@@ -564,7 +596,7 @@ q[
         }
     }
 %>
-  <tr><th></th><td style="padding-top: 1em;"><% $submit %></td></tr>
+  <tr><th></th><td style="padding-top: 1em;"><% $submit %> <% $reset %></td></tr>
 </table>
 </fieldset>
 <% $end %>
@@ -809,6 +841,10 @@ dropdown lists or change input types at runtime.
 Calls C<render> on the FormBuilder form, and either writes the resulting
 HTML to a file, or to STDOUT if no filename is given.
 
+=head2 as_module
+
+    my $module_code = $parser->as_module($package, $use_tidy);
+
 =head2 write_module
 
 I<B<Note:> The code output from the C<write_*> methods may be in flux for
@@ -851,6 +887,13 @@ will run L<Perl::Tidy> on the generated code before writing the module file.
 
     # write tidier code
     $parser->write_module('My::Form', 1);
+
+If you set C<$use_tidy> to a string beginning with `-' C<write_module> will
+interpret C<$use_tidy> as the formatting option switches to pass to Perl::Tidy.
+
+=head2 as_script
+
+    my $script_code = $parser->as_script($use_tidy);
 
 =head2 write_script
 
@@ -962,6 +1005,10 @@ Any of these can be overriden by the C<build> method:
     !note {
         ...
     }
+    
+    !submit label, label 2, ...
+    
+    !reset label
 
 =head2 Directives
 
@@ -1012,6 +1059,21 @@ next to each other.
 
 A text note that can be inserted as a row in the form. This is useful for
 special instructions at specific points in a long form.
+
+=item C<!submit>
+
+A list of one or more submit button labels in a comma-separated list. Each label
+is a L<string|/Strings>. Multiple instances of this directive may be used; later
+lists are simply appended to the earlier lists. All the submit buttons are 
+rendered together at the bottom of the form. See L<CGI::FormBuilder> for an
+explanation of how the multiple submit buttons work together in a form.
+
+To disable the display of any submit button, use C<!submit 0>
+
+=item C<!reset>
+
+The label for the a reset button at the end of the form. No reset button will be
+rendered unless you use this directive.
 
 =back
 
@@ -1072,6 +1134,10 @@ Recognized input types are the same as those used by CGI::FormBuilder:
     hidden
     static
 
+For multi-select fields, append a C<*> to the field type:
+
+    colors:select*
+
 To change the size of the input field, add a bracketed subscript after the
 field name (but before the descriptive label):
 
@@ -1097,6 +1163,12 @@ Growable fields also require JavaScript to function correctly.
 
     # you can have as many people as you like
     person*:text
+
+To set a limit to the maximum number of inputs a field can grow to, add
+a number after the C<*>:
+
+    # allow up to 5 musicians
+    musician*5:text
 
 To create a C<radio> or C<select> field that includes an "other" option,
 append the string C<+other> to the field type:
@@ -1224,8 +1296,7 @@ Better tests!
 
 Make sure that multiple runs of the parser don't share data.
 
-Allow renaming of the submit button; allow renaming and inclusion of a 
-reset button
+Warn/suggest using the C<!submit> directive if some uses C<foo:submit>?
 
 Set FB constructor options directly in the formspec (via a C<!fb> or similar
 directive). The major issue here would be what format to use to allow for
@@ -1238,13 +1309,11 @@ C<!include> directive to include external formspec files
 
 =head2 Code generation/Templates
 
-Expose some of the currently private functions to be able to get the generated
-code text directly, without printing.
-
 Revise the generated form constructing code to use the C<fieldopts>
 option to C<< FB->new >>; will require FB 3.02 to run.
 
-Better integration with L<CGI::FormBuilder>'s templating system
+Better integration with L<CGI::FormBuilder>'s templating system; rely on the
+FB messages instead of trying to make our own.
 
 Allow for custom wrappers around the C<form_template>
 
