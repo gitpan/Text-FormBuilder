@@ -9638,9 +9638,10 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::form_spec
 		
 
 		$_tok = ($_noactions) ? 0 : do {
-	@lines = ();
+	# clear out old data, so we don't end up with old data in new objects
+	@lines    = ();
 	@sections = ();
-	%formspec = ();  # clear the old formspec data
+	%formspec = ();
     };
 		unless (defined $_tok)
 		{
@@ -9702,6 +9703,8 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::form_spec
 		};
 	}
 	
+	# make copies instead of taking references, again so we
+	# don't end up with connections between objects
 	$return = {
 	    fb_params   => $formspec{fb_params},
 	    title       => $formspec{title},
@@ -9712,10 +9715,7 @@ sub Parse::RecDescent::Text::FormBuilder::Parser::form_spec
 	    subs        => { %subs },
 	    groups      => { %groups },
 	    sections    => [ @sections ],
-	    ( @submit ? 
-		(submit => @submit == 1 ? $submit[0] : [ @submit ]) :
-		()
-	    ),
+	    ( @submit ? (submit => @submit == 1 ? $submit[0] : [ @submit ]) : () ),
 	    reset       => $formspec{reset},
 	}
     };
@@ -16777,9 +16777,10 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                   'lookahead' => 0,
                                                                                                   'line' => 39,
                                                                                                   'code' => '{
-	@lines = ();
+	# clear out old data, so we don\'t end up with old data in new objects
+	@lines    = ();
 	@sections = ();
-	%formspec = ();  # clear the old formspec data
+	%formspec = ();
     }'
                                                                                                 }, 'Parse::RecDescent::Action' ),
                                                                                          bless( {
@@ -16791,12 +16792,12 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
                                                                                                   'matchrule' => 0,
                                                                                                   'repspec' => 's',
                                                                                                   'lookahead' => 0,
-                                                                                                  'line' => 44
+                                                                                                  'line' => 45
                                                                                                 }, 'Parse::RecDescent::Repetition' ),
                                                                                          bless( {
                                                                                                   'hashname' => '__ACTION2__',
                                                                                                   'lookahead' => 0,
-                                                                                                  'line' => 45,
+                                                                                                  'line' => 46,
                                                                                                   'code' => '{
 	# grab the last section, if there is any
 	if (@lines) {
@@ -16808,6 +16809,8 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
 		};
 	}
 	
+	# make copies instead of taking references, again so we
+	# don\'t end up with connections between objects
 	$return = {
 	    fb_params   => $formspec{fb_params},
 	    title       => $formspec{title},
@@ -16818,10 +16821,7 @@ package Text::FormBuilder::Parser; sub new { my $self = bless( {
 	    subs        => { %subs },
 	    groups      => { %groups },
 	    sections    => [ @sections ],
-	    ( @submit ? 
-		(submit => @submit == 1 ? $submit[0] : [ @submit ]) :
-		()
-	    ),
+	    ( @submit ? (submit => @submit == 1 ? $submit[0] : [ @submit ]) : () ),
 	    reset       => $formspec{reset},
 	}
     }'
