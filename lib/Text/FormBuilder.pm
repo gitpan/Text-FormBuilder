@@ -6,7 +6,7 @@ use warnings;
 use base qw(Exporter Class::ParseText::Base);
 use vars qw($VERSION @EXPORT);
 
-$VERSION = '0.13';
+$VERSION = '0.14';
 @EXPORT = qw(create_form);
 
 use Carp;
@@ -1391,8 +1391,6 @@ I'm sure there are more in there, I just haven't tripped over any new ones latel
 Suggestions on how to improve the (currently tiny) test suite would be appreciated.
 
 =head1 SEE ALSO
-
-L<http://textformbuilder.berlios.de>
 
 L<CGI::FormBuilder>, L<http://formbuilder.org>
 

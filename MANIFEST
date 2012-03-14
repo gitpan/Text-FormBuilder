@@ -1,5 +1,5 @@
 Changes
-Makefile.PL
+Build.PL
 MANIFEST
 README
 t/Text-FormBuilder.t
@@ -8,7 +8,8 @@ t/01-field.t
 bin/fb.pl
 lib/Text/FormBuilder.pm
 lib/Text/FormBuilder/Examples.pod
-lib/Text/FormBuilder/Parser.pm
 lib/Text/FormBuilder/grammar
+lib/Text/FormBuilder/Parser.pm.PL
 lib/Class/ParseText/Base.pm
-META.yml                                 Module meta-data (added by MakeMaker)
+META.yml
+META.json

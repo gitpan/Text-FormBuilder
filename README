@@ -1,14 +1,14 @@
-Text-FormBuilder version 0.12
+Text-FormBuilder version 0.14
 =============================
 
 INSTALLATION
 
 To install this module type the following:
 
-   perl Makefile.PL
-   make
-   make test
-   make install
+   perl Build.PL
+   ./Build
+   ./Build test
+   ./Build install
 
 DEPENDENCIES
 
